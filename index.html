@@ -291,12 +291,10 @@ function buildStringer(){
   ys.forEach(y=>{
     if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
     else{
-      // CHÂN SUỐT KHOÉT: 1 chân liền chạy suốt, KHOÉT 2 hốc ở ĐÁY cho càng xe nâng luồn qua (4 chiều).
-      // = dải gỗ LIỀN suốt phía trên + 3 mấu chân ở đáy (2 đầu + giữa), chừa 2 hốc giữa các mấu.
-      const notchH=Math.min(strH*0.55, strH-20);   // chiều sâu hốc khoét (từ đáy lên), chừa dải trên >=20mm
-      const bandH=strH-notchH, seg=L/5;             // 5 đoạn dọc: chân-hốc-chân-hốc-chân
-      boxes.push({x:0,y,z:zStr+notchH,dx:L,dy:strW,dz:bandH,kind:'block'});           // dải liền suốt phía trên
-      [0,2,4].forEach(i=>boxes.push({x:i*seg,y,z:zStr,dx:seg,dy:strW,dz:notchH,kind:'block'})); // 3 mấu chân đáy
+      // CHÂN SUỐT KHOÉT: 1 chân liền chạy suốt, KHOÉT 2 HỐC VÒM ở ĐÁY cho càng xe nâng luồn qua (4 chiều).
+      const nh=Math.min(strH*0.62, strH-16);   // chiều sâu hốc vòm
+      boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'notch',
+        notches:[{cx:L*0.285,hw:L*0.105,nh},{cx:L*0.715,hw:L*0.105,nh}]});
     }
   });
   positions(topN,topW,L).forEach(x=>boxes.push({x,y:0,z:zTop,dx:topW,dy:W,dz:topT,kind:'board'}));
@@ -335,6 +333,34 @@ function drawBox(ctx,b,s,ox,oy){
   face([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],'#D9DCDE');   // right (vừa)
   face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#F0F1F2');       // top   (sáng)
 }
+/* CHÂN SUỐT KHOÉT HỐC VÒM - vẽ profile (x-z) đùn theo bề rộng strW */
+function archProf(t){return Math.min(1,Math.sin(Math.PI*t)*1.55);} // bump cạnh dốc, đỉnh phẳng
+function notchBottomPts(x0,x1,z0,notches){
+  const pts=[[x0,z0]];
+  notches.forEach(n=>{
+    const nl=n.cx-n.hw,N=14;
+    pts.push([nl,z0]);
+    for(let i=0;i<=N;i++){const t=i/N;pts.push([nl+2*n.hw*t,z0+n.nh*archProf(t)]);}
+    pts.push([n.cx+n.hw,z0]);
+  });
+  pts.push([x1,z0]);
+  return pts;
+}
+function drawNotchStr(ctx,b,s,ox,oy){
+  const {x:x0,y:by,z:z0,dx,dy,dz,notches}=b,x1=x0+dx,z1=z0+dz,yF=by+dy,yB=by;
+  const P=(X,Y,Z)=>proj(X,Y,Z,s,ox,oy);
+  const poly=(arr,col)=>{ctx.beginPath();arr.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='#2A2F33';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke();};
+  poly([P(x0,yB,z1),P(x1,yB,z1),P(x1,yF,z1),P(x0,yF,z1)],'#F0F1F2');            // mặt trên
+  poly([P(x1,yB,z0),P(x1,yF,z0),P(x1,yF,z1),P(x1,yB,z1)],'#D9DCDE');            // mặt đầu phải
+  notches.forEach(n=>{                                                            // trần hốc (vòm) - tạo chiều sâu
+    const nl=n.cx-n.hw,N=14,arc=[];
+    for(let i=0;i<=N;i++){const t=i/N;arc.push([nl+2*n.hw*t,z0+n.nh*archProf(t)]);}
+    for(let i=0;i<N;i++){const a=arc[i],c=arc[i+1];
+      poly([P(a[0],yF,a[1]),P(c[0],yF,c[1]),P(c[0],yB,c[1]),P(a[0],yB,a[1])],'#B7BBBE');}
+  });
+  const bottom=notchBottomPts(x0,x1,z0,notches);                                  // mặt bên (profile có hốc vòm)
+  poly([...bottom,[x1,z1],[x0,z1]].map(p=>P(p[0],yF,p[1])),'#CBCFD2');
+}
 function dimLine(ctx,p1,p2,label,fs){
   ctx.strokeStyle='#27343A';ctx.lineWidth=1.1;ctx.fillStyle='#27343A';
   ctx.beginPath();ctx.moveTo(p1.X,p1.Y);ctx.lineTo(p2.X,p2.Y);ctx.stroke();
@@ -354,7 +380,7 @@ function drawPalletInto(ctx,area,m){
   const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
   ctx.save();ctx.fillStyle='rgba(39,52,58,.06)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+12,q.Y+16):ctx.moveTo(q.X+12,q.Y+16));ctx.closePath();ctx.fill();ctx.restore();
   // Vẽ theo LỚP từ dưới lên (z trước), trong cùng lớp thì xa -> gần (x+y) -> xếp chồng đúng, không có thanh "bay".
-  [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.dx/2+a.y+a.dy/2)-(b.x+b.dx/2+b.y+b.dy/2))).forEach(b=>drawBox(ctx,b,s,ox,oy));
+  [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.dx/2+a.y+a.dy/2)-(b.x+b.dx/2+b.y+b.dy/2))).forEach(b=>b.kind==='notch'?drawNotchStr(ctx,b,s,ox,oy):drawBox(ctx,b,s,ox,oy));
   let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
   let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
   let pe=proj(L,W,0,s,ox,oy),pf=proj(L,W,H,s,ox,oy);pe={X:pe.X+46,Y:pe.Y};pf={X:pf.X+46,Y:pf.Y};
@@ -412,7 +438,15 @@ function draw2DSide(ctx,area,m){
   const dw=L*s,dh=H*s,px=ax+(aw-dw)/2,py=ay+(ah-dh)/2;
   const X=x=>px+x*s,Y=z=>py+(H-z)*s;
   [...m.boxes].sort((a,b)=>a.z-b.z).forEach(b=>{
-    ctx.fillStyle=b.kind==='block'?'#CFD3D6':'#E4E7E9';ctx.strokeStyle='#2A2F33';ctx.lineWidth=1;
+    ctx.strokeStyle='#2A2F33';ctx.lineWidth=1;
+    if(b.kind==='notch'){ // profile chân khoét có 2 hốc vòm
+      ctx.fillStyle='#CFD3D6';
+      const bottom=notchBottomPts(b.x,b.x+b.dx,b.z,b.notches);
+      const prof=[...bottom,[b.x+b.dx,b.z+b.dz],[b.x,b.z+b.dz]];
+      ctx.beginPath();prof.forEach((p,i)=>{const xx=X(p[0]),yy=Y(p[1]);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.closePath();ctx.fill();ctx.stroke();
+      return;
+    }
+    ctx.fillStyle=b.kind==='block'?'#CFD3D6':'#E4E7E9';
     ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
   });
   vDim(ctx,Y(0),Y(H),X(0)-24,Math.round(H)+' mm');
