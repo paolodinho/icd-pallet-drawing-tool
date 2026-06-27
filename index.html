@@ -374,7 +374,7 @@ function drawNotchStr(ctx,b,s,ox,oy){
     const nl=n.cx-n.hw,N=14,arc=[];
     for(let i=0;i<=N;i++){const t=i/N;arc.push([nl+2*n.hw*t,z0+n.nh*archProf(t)]);}
     for(let i=0;i<N;i++){const a=arc[i],c=arc[i+1];
-      poly([P(a[0],yF,a[1]),P(c[0],yF,c[1]),P(c[0],yB,c[1]),P(a[0],yB,a[1])],'#B7BBBE');}
+      poly([P(a[0],yF,a[1]),P(c[0],yF,c[1]),P(c[0],yB,c[1]),P(a[0],yB,a[1])],'#E7E9EB');}
   });
   const bottom=notchBottomPts(x0,x1,z0,notches);                                  // mặt bên (profile có hốc vòm)
   poly([...bottom,[x1,z1],[x0,z1]].map(p=>P(p[0],yF,p[1])),'#CBCFD2');
