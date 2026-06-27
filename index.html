@@ -30,6 +30,24 @@
   .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
   .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
   .chk input{width:auto}
+  /* ===== MOBILE ===== */
+  @media (max-width:820px){
+    header.top{padding:10px 14px;gap:10px}
+    header.top img{height:34px!important;padding:4px 8px!important}
+    header.top .sub{font-size:11px;line-height:1.35}
+    .wrap{flex-direction:column;padding:10px;gap:12px}
+    .form{width:100%;flex:1 1 auto}
+    .out{width:100%;min-width:0;flex:1 1 auto}
+    .panel{padding:12px;border-radius:8px}
+    label{font-size:13px}
+    input,select{font-size:16px;padding:10px}      /* >=16px: iOS không tự zoom khi focus */
+    button{padding:14px;font-size:16px}
+    canvas{border:1px solid var(--line);border-radius:6px}
+  }
+  /* nút tải PNG nổi bật, dính đáy trên mobile để bấm nhanh sau khi chỉnh */
+  @media (max-width:820px){
+    .out{order:2}.form{order:1}
+  }
 </style>
 </head>
 <body>
