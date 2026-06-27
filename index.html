@@ -379,6 +379,10 @@ function render(){
 function downloadPNG(){render();const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');a.download='ban-ve-'+($('title').value.replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();}
 
 buildPresetMenu();$('size').value='1219x1016';applyStyle();
+// LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
+['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
+  if(e.target.id==='style'||e.target.id==='size')return; render();
+}));
 </script>
 </body>
 </html>
