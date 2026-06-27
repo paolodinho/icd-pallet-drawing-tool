@@ -540,6 +540,11 @@ buildPresetMenu();$('size').value='1219x1016';applyStyle();
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
   if(e.target.id==='style'||e.target.id==='size')return; render();
 }));
+// Khi nhúng iframe: báo chiều cao cho trang cha để iframe tự co (không bị cắt/thừa)
+function postHeight(){try{parent.postMessage({icdPalletH:document.documentElement.scrollHeight},'*');}catch(e){}}
+window.addEventListener('load',()=>{postHeight();setTimeout(postHeight,400);});
+window.addEventListener('resize',postHeight);
+new MutationObserver(postHeight).observe(document.body,{subtree:true,attributes:true,childList:true});
 </script>
 </body>
 </html>
