@@ -161,6 +161,15 @@ function num(id){return parseFloat($(id).value)||0;}
 function positions(n,w,span){if(n<=1)return [(span-w)/2];const gap=(span-n*w)/(n-1);const a=[];for(let i=0;i<n;i++)a.push(i*(w+gap));return a;}
 
 function shade(hex,m){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.min(255,r*m)|0;g=Math.min(255,g*m)|0;b=Math.min(255,b*m)|0;return 'rgb('+r+','+g+','+b+')';}
+// Cote cho TỪNG nan mặt + TỪNG khe hở dọc cạnh trên (kiểu mẫu gửi khách 2): nan ở hàng thấp, khe ở hàng cao để không đè nhau.
+function topEdgeDims(xs,w,gap,Htot){
+  const d=[];
+  xs.forEach((x,i)=>{
+    d.push({a:[x,0,Htot],b:[x+w,0,Htot],off:{x:0,y:-17},label:Math.round(w)+''});
+    if(i<xs.length-1)d.push({a:[x+w,0,Htot],b:[xs[i+1],0,Htot],off:{x:0,y:-34},label:Math.round(gap)+''});
+  });
+  return d;
+}
 
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
@@ -242,8 +251,11 @@ function buildBlock(){
   // Tâm các CỘT chân (theo chiều rộng W). Mỗi cột chân = 1 nan liên kết trên + 1 nan đáy dưới, CĂN THẲNG cột.
   const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân
   const xs=positions(blkNL,blkA,L);                 // vị trí chân theo chiều dài
-  // NAN ĐÁY: 1 thanh / cột chân, căn giữa cột -> mọi chân đều nằm trên nan đáy (không rời)
-  colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'}));
+  // NAN ĐÁY:
+  //  - 2 mặt: SÀN ĐÁY đầy đủ (nan chạy ngang như sàn trên) -> kín mặt dưới
+  //  - 1 mặt: 1 nan dọc / cột chân, căn giữa cột -> mọi chân tì lên nan đáy (không rời)
+  if(faces===2){ positions(botN,botW,L).forEach(x=>boxes.push({x,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
+  else { colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'})); }
   // CHÂN CỤC
   xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
   // NAN LIÊN KẾT: 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
@@ -255,12 +267,11 @@ function buildBlock(){
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
   cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+nCol+' nan)']);
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
-  cau.push([faces===2?'Nan đáy (mặt dưới)':'Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
-  const gap=topN>1?(L-topN*topW)/(topN-1):0;
-  const x0=Math.floor((topN-1)/2)*(topW+gap); // nan ở giữa cạnh cho dễ đọc
+  if(faces===2)cau.push(['Nan đáy (sàn mặt dưới)',botW+'x'+botT+'x'+W+'mm','('+botN+' nan)']);
+  else cau.push(['Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
+  const xsTop=positions(topN,topW,L), gap=topN>1?(L-topN*topW)/(topN-1):0;
   const adims=[
-    {a:[x0,0,Htot],b:[x0+topW,0,Htot],off:{x:0,y:-24},label:topW+''},
-    {a:[x0+topW,0,Htot],b:[x0+topW+gap,0,Htot],off:{x:0,y:-24},label:Math.round(gap)+''},
+    ...topEdgeDims(xsTop,topW,gap,Htot),
     {a:[L,0,zTop],b:[L,0,Htot],off:{x:30,y:-4},label:topT+''},
     {a:[L,0,zBlock],b:[L,0,zBlock+blkH],off:{x:30,y:-4},label:blkH+''},
     {a:[L,0,0],b:[L,0,botT],off:{x:30,y:-4},label:botT+''},
@@ -292,11 +303,9 @@ function buildStringer(){
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
   cau.push(['Đà dọc',strW+'x'+strH+'x'+L+'mm','('+strN+' đà'+(notch?', khoét chân':'')+')']);
   if(hasBot)cau.push(['Nan đáy (mặt dưới)',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
-  const gap=topN>1?(L-topN*topW)/(topN-1):0;
-  const x0=Math.floor((topN-1)/2)*(topW+gap);
+  const xsTop=positions(topN,topW,L), gap=topN>1?(L-topN*topW)/(topN-1):0;
   const adims=[
-    {a:[x0,0,Htot],b:[x0+topW,0,Htot],off:{x:0,y:-24},label:topW+''},
-    {a:[x0+topW,0,Htot],b:[x0+topW+gap,0,Htot],off:{x:0,y:-24},label:Math.round(gap)+''},
+    ...topEdgeDims(xsTop,topW,gap,Htot),
     {a:[L,0,zStr],b:[L,0,zStr+strH],off:{x:30,y:-4},label:strH+''},
     {a:[L,0,zTop],b:[L,0,Htot],off:{x:30,y:-4},label:topT+''},
   ];
@@ -317,21 +326,13 @@ function buildCollar(){
 /* ---------- ISO RENDER ---------- */
 function proj(x,y,z,s,ox,oy){return {X:ox+(x-y)*COS*s,Y:oy+(x+y)*SIN*s-z*s};}
 function drawBox(ctx,b,s,ox,oy){
-  const {x,y,z,dx,dy,dz,kind}=b,zt=z+dz;
-  const base=kind==='block'?'#B07A3E':'#CC9150';
+  // Nét kỹ thuật xám sạch (kiểu SketchUp): 3 mặt sáng dần, viền đen mảnh - KHÔNG vân gỗ.
+  const {x,y,z,dx,dy,dz}=b,zt=z+dz;
   const P=(X,Y,Z)=>proj(X,Y,Z,s,ox,oy);
-  function vgrad(pts,c1,c2){const ys=pts.map(p=>p.Y);const g=ctx.createLinearGradient(0,Math.min(...ys),0,Math.max(...ys));g.addColorStop(0,c1);g.addColorStop(1,c2);return g;}
-  function face(pts3,c1,c2){const pts=pts3.map(p=>P(p[0],p[1],p[2]));ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.fillStyle=vgrad(pts,c1,c2);ctx.fill();ctx.strokeStyle='rgba(70,45,20,.5)';ctx.lineWidth=1;ctx.stroke();return pts;}
-  face([[x,y+dy,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x,y+dy,zt]],shade(base,.66),shade(base,.5));   // left
-  face([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],shade(base,.88),shade(base,.72));   // right
-  const tp=face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],shade(base,1.18),shade(base,1.05)); // top
-  // vân gỗ chạy dọc theo chiều dài thanh
-  ctx.save();ctx.beginPath();tp.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.clip();
-  ctx.strokeStyle='rgba(110,72,35,.16)';ctx.lineWidth=1;
-  const n=3;
-  if(dx>=dy){for(let i=1;i<=n;i++){const yy=y+dy*i/(n+1),a=P(x,yy,zt),c=P(x+dx,yy,zt);ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(c.X,c.Y);ctx.stroke();}}
-  else{for(let i=1;i<=n;i++){const xx=x+dx*i/(n+1),a=P(xx,y,zt),c=P(xx,y+dy,zt);ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(c.X,c.Y);ctx.stroke();}}
-  ctx.restore();
+  function face(pts3,fill){const pts=pts3.map(p=>P(p[0],p[1],p[2]));ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle='#2A2F33';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke();return pts;}
+  face([[x,y+dy,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x,y+dy,zt]],'#C7CBCE');   // left  (tối)
+  face([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],'#D9DCDE');   // right (vừa)
+  face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#F0F1F2');       // top   (sáng)
 }
 function dimLine(ctx,p1,p2,label,fs){
   ctx.strokeStyle='#27343A';ctx.lineWidth=1.1;ctx.fillStyle='#27343A';
@@ -348,9 +349,9 @@ function drawPalletInto(ctx,area,m){
   corners.forEach(c=>{const p=proj(c[0],c[1],c[2],1,0,0);minX=Math.min(minX,p.X);maxX=Math.max(maxX,p.X);minY=Math.min(minY,p.Y);maxY=Math.max(maxY,p.Y);});
   const pad=70,s=Math.min((aw-pad*2)/(maxX-minX),(ah-pad*2)/(maxY-minY));
   const ox=ax+pad-minX*s+((aw-pad*2)-(maxX-minX)*s)/2, oy=ay+pad-minY*s+((ah-pad*2)-(maxY-minY)*s)/2;
-  // đổ bóng nền
+  // bóng nền rất nhạt (xám) cho có chiều sâu, không màu nâu
   const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
-  ctx.save();ctx.fillStyle='rgba(40,30,15,.12)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+14,q.Y+18):ctx.moveTo(q.X+14,q.Y+18));ctx.closePath();ctx.fill();ctx.restore();
+  ctx.save();ctx.fillStyle='rgba(39,52,58,.06)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+12,q.Y+16):ctx.moveTo(q.X+12,q.Y+16));ctx.closePath();ctx.fill();ctx.restore();
   [...m.boxes].sort((a,b)=>((a.x+a.dx/2+a.y+a.dy/2)-(b.x+b.dx/2+b.y+b.dy/2))||(a.z-b.z)).forEach(b=>drawBox(ctx,b,s,ox,oy));
   let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
   let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
@@ -393,11 +394,11 @@ function draw2DTop(ctx,area,m){
   const s=Math.min((aw-pad*2)/L,(ah-pad*2)/W);
   const dw=L*s,dh=W*s,px=ax+(aw-dw)/2,py=ay+(ah-dh)/2;
   const X=x=>px+x*s,Y=y=>py+y*s;
-  ctx.fillStyle='#FBF7F1';ctx.fillRect(X(0),Y(0),dw,dh);
+  ctx.fillStyle='#FAFBFC';ctx.fillRect(X(0),Y(0),dw,dh);
   const top=m.boxes.filter(b=>Math.abs((b.z+b.dz)-m.Htot)<0.6).sort((a,b)=>a.x-b.x);
   ctx.lineWidth=1;
-  top.forEach(b=>{ctx.fillStyle='#E2B179';ctx.strokeStyle='#9c6a30';ctx.fillRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);});
-  ctx.strokeStyle='#C9CDD2';ctx.strokeRect(X(0),Y(0),dw,dh);
+  top.forEach(b=>{ctx.fillStyle='#E4E7E9';ctx.strokeStyle='#2A2F33';ctx.fillRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);});
+  ctx.strokeStyle='#9aa0a5';ctx.strokeRect(X(0),Y(0),dw,dh);
   hDim(ctx,X(0),X(L),Y(W)+26,L+' mm');
   vDim(ctx,Y(0),Y(W),X(L)+28,W+' mm');
   if(top.length>1){const a=top[0],b=top[1];hDim(ctx,X(a.x),X(a.x+a.dx),Y(0)-14,Math.round(a.dx)+'');hDim(ctx,X(a.x+a.dx),X(b.x),Y(0)-14,Math.round(b.x-(a.x+a.dx))+'');}
@@ -409,7 +410,7 @@ function draw2DSide(ctx,area,m){
   const dw=L*s,dh=H*s,px=ax+(aw-dw)/2,py=ay+(ah-dh)/2;
   const X=x=>px+x*s,Y=z=>py+(H-z)*s;
   [...m.boxes].sort((a,b)=>a.z-b.z).forEach(b=>{
-    ctx.fillStyle=b.kind==='block'?'#D8A063':'#E2B179';ctx.strokeStyle='#9c6a30';ctx.lineWidth=1;
+    ctx.fillStyle=b.kind==='block'?'#CFD3D6':'#E4E7E9';ctx.strokeStyle='#2A2F33';ctx.lineWidth=1;
     ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
   });
   vDim(ctx,Y(0),Y(H),X(0)-24,Math.round(H)+' mm');
