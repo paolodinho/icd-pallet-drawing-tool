@@ -540,11 +540,14 @@ buildPresetMenu();$('size').value='1219x1016';applyStyle();
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
   if(e.target.id==='style'||e.target.id==='size')return; render();
 }));
-// Khi nhúng iframe: báo chiều cao cho trang cha để iframe tự co (không bị cắt/thừa)
-function postHeight(){try{parent.postMessage({icdPalletH:document.documentElement.scrollHeight},'*');}catch(e){}}
-window.addEventListener('load',()=>{postHeight();setTimeout(postHeight,400);});
-window.addEventListener('resize',postHeight);
-new MutationObserver(postHeight).observe(document.body,{subtree:true,attributes:true,childList:true});
+// Khi nhúng iframe: báo chiều cao NỘI DUNG THẬT cho trang cha (đo đáy header + .wrap,
+// KHÔNG dùng documentElement.scrollHeight vì nó trả về chiều cao viewport -> gây vòng lặp phình vô hạn).
+function contentHeight(){let b=0;document.querySelectorAll('header.top,.wrap').forEach(e=>{const bot=e.getBoundingClientRect().bottom+window.pageYOffset;if(bot>b)b=bot;});return Math.ceil(b)+10;}
+function postHeight(){try{parent.postMessage({icdPalletH:contentHeight()},'*');}catch(e){}}
+window.addEventListener('load',()=>{postHeight();setTimeout(postHeight,500);});
+// Chỉ đo lại khi NỘI DUNG đổi (đổi input/kiểu) hoặc bề RỘNG đổi (reflow thật) - KHÔNG nghe đổi chiều cao iframe.
+let _lastW=0;window.addEventListener('resize',()=>{if(window.innerWidth!==_lastW){_lastW=window.innerWidth;postHeight();}});
+['input','change','click'].forEach(ev=>document.addEventListener(ev,()=>setTimeout(postHeight,80)));
 </script>
 </body>
 </html>
