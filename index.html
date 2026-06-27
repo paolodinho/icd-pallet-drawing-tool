@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICD - Tạo bản vẽ pallet gỗ từ thông số</title>
+<style>
+  :root{--orange:#FB7703;--orange-dark:#E8610A;--dark:#27343A;--line:#E2E5E8;--bg:#F4F5F7;--muted:#6B7680;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--dark)}
+  header.top{background:var(--dark);color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px}
+  header.top .logo{font-weight:800;font-size:22px;letter-spacing:1px}
+  header.top .logo span{color:var(--orange)}
+  header.top .sub{font-size:13px;color:#B7C0C7}
+  .wrap{display:flex;gap:18px;padding:18px;align-items:flex-start;flex-wrap:wrap}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px}
+  .form{width:370px;flex:0 0 370px}
+  .out{flex:1;min-width:520px}
+  h3{margin:2px 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.5px;border-left:3px solid var(--orange);padding-left:8px}
+  .grp{margin-bottom:13px;padding-bottom:11px;border-bottom:1px dashed var(--line)}
+  .grp:last-child{border-bottom:0}
+  .grp .gt{font-size:12px;font-weight:700;color:var(--orange-dark);margin-bottom:7px;text-transform:uppercase}
+  label{display:block;font-size:12px;color:var(--muted);margin:6px 0 2px}
+  input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;color:var(--dark);background:#fff}
+  .row{display:flex;gap:8px}.row>div{flex:1}
+  button{cursor:pointer;border:0;border-radius:7px;font-weight:700;font-size:14px;padding:11px 14px}
+  .btn-primary{background:var(--orange);color:#fff;width:100%;margin-top:6px}
+  .btn-ghost{background:#fff;color:var(--dark);border:1px solid var(--line);margin-top:8px;width:100%}
+  canvas{width:100%;height:auto;display:block;border-radius:8px;background:#fff}
+  .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+  .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .chk input{width:auto}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="logo">I<span>C</span>D</div>
+  <div>
+    <div style="font-weight:700;font-size:15px">Công cụ tạo bản vẽ pallet gỗ</div>
+    <div class="sub">Vẽ được mọi kiểu dáng pallet gỗ trên icdvietnam.com.vn - nhập số → ra bản vẽ → tải PNG</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel form">
+    <h3>Thông số đầu vào</h3>
+
+    <div class="grp">
+      <div class="gt">Kiểu dáng</div>
+      <select id="style" onchange="applyStyle()"></select>
+      <label>Khổ / tiêu chuẩn (chỉ đổi kích thước)</label>
+      <select id="size" onchange="applySize()"></select>
+      <select id="engine" style="display:none"><option value="block"></option><option value="stringer"></option><option value="collar"></option></select>
+    </div>
+
+    <div class="grp">
+      <div class="gt">Thông tin chung</div>
+      <label>Tên / model (hiện trên bản vẽ)</label>
+      <input id="title" value="PALLET GỖ KEO 1219x1016x127mm">
+      <div class="row">
+        <div><label>Chất liệu</label><input id="material" value="Gỗ keo"></div>
+        <div id="f-faces"><label>Số mặt</label>
+          <select id="faces" onchange="render()"><option value="2">2 mặt</option><option value="1">1 mặt</option></select>
+        </div>
+      </div>
+      <div class="row">
+        <div><label>Dài L (mm)</label><input id="L" type="number" value="1219"></div>
+        <div><label>Rộng W (mm)</label><input id="W" type="number" value="1016"></div>
+      </div>
+    </div>
+
+    <!-- TOP DECK (block + stringer) -->
+    <div class="grp" data-eng="block stringer">
+      <div class="gt">Nan mặt trên</div>
+      <div class="row">
+        <div><label>Rộng (mm)</label><input id="topW" type="number" value="75"></div>
+        <div><label>Dày (mm)</label><input id="topT" type="number" value="15"></div>
+        <div><label>Số nan</label><input id="topN" type="number" value="8"></div>
+      </div>
+    </div>
+
+    <!-- BLOCK -->
+    <div class="grp" data-eng="block">
+      <div class="gt">Nan liên kết mặt (dọc)</div>
+      <div class="row">
+        <div><label>Rộng</label><input id="linkW" type="number" value="75"></div>
+        <div><label>Dày</label><input id="linkT" type="number" value="15"></div>
+        <div><label>Số nan</label><input id="linkN" type="number" value="3"></div>
+      </div>
+    </div>
+    <div class="grp" data-eng="block">
+      <div class="gt">Chân cục</div>
+      <div class="row">
+        <div><label>Dài a</label><input id="blkA" type="number" value="100"></div>
+        <div><label>Rộng b</label><input id="blkB" type="number" value="80"></div>
+        <div><label>Cao h</label><input id="blkH" type="number" value="80"></div>
+      </div>
+      <div class="row">
+        <div><label>Số cục theo dài</label><input id="blkNL" type="number" value="3"></div>
+        <div><label>Số cục theo rộng</label><input id="blkNW" type="number" value="3"></div>
+      </div>
+    </div>
+    <div class="grp" data-eng="block">
+      <div class="gt">Nan đáy (khi 2 mặt / chu vi)</div>
+      <div class="row">
+        <div><label>Rộng</label><input id="botW" type="number" value="75"></div>
+        <div><label>Dày</label><input id="botT" type="number" value="15"></div>
+        <div><label>Số nan</label><input id="botN" type="number" value="3"></div>
+      </div>
+    </div>
+
+    <!-- STRINGER -->
+    <div class="grp" data-eng="stringer">
+      <div class="gt">Đà dọc (chạy suốt chiều dài)</div>
+      <div class="row">
+        <div><label>Rộng đà</label><input id="strW" type="number" value="100"></div>
+        <div><label>Cao đà</label><input id="strH" type="number" value="90"></div>
+        <div><label>Số đà</label><input id="strN" type="number" value="3"></div>
+      </div>
+      <div class="chk"><input type="checkbox" id="notch" onchange="render()"><label style="margin:0">Khoét chân (2 hốc/đà → 4 chiều nâng)</label></div>
+    </div>
+
+    <!-- COLLAR -->
+    <div class="grp" data-eng="collar">
+      <div class="gt">Khung gỗ</div>
+      <div class="row">
+        <div><label>Dày ván (mm)</label><input id="colT" type="number" value="20"></div>
+        <div><label>Cao khung (mm)</label><input id="colH" type="number" value="195"></div>
+      </div>
+    </div>
+
+    <div class="grp" data-eng="block stringer">
+      <div class="gt">Thông số bảng (tuỳ chọn)</div>
+      <div class="row">
+        <div><label>Tải động (kg)</label><input id="dynLoad" value="1500"></div>
+        <div><label>Tải tĩnh (kg)</label><input id="staLoad" value="2000"></div>
+      </div>
+      <div class="row">
+        <div><label>Độ ẩm</label><input id="moist" value="≤ 18%"></div>
+        <div><label>Xử lý</label><input id="treat" value="Sấy tự nhiên"></div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="render()">Vẽ lại bản vẽ</button>
+    <button class="btn-ghost" onclick="downloadPNG()">Tải ảnh PNG gửi khách</button>
+    <div class="hint">Chọn kiểu dáng ở trên để điền sẵn. Số nan / số cục nhập bao nhiêu vẽ đúng bấy nhiêu - không sai như AI sinh ảnh.</div>
+  </div>
+
+  <div class="panel out">
+    <h3>Bản vẽ kết quả</h3>
+    <canvas id="sheet" width="1400" height="980"></canvas>
+  </div>
+</div>
+
+<script>
+const A=Math.PI/6,COS=Math.cos(A),SIN=Math.sin(A);
+function $(id){return document.getElementById(id);}
+function num(id){return parseFloat($(id).value)||0;}
+function positions(n,w,span){if(n<=1)return [(span-w)/2];const gap=(span-n*w)/(n-1);const a=[];for(let i=0;i<n;i++)a.push(i*(w+gap));return a;}
+
+const C={boardTop:'#E2B179',boardR:'#C68B49',boardL:'#A86E33',blockTop:'#D8A063',blockR:'#B57C40',blockL:'#94632C'};
+
+/* ---------- KIỂU DÁNG (cấu trúc) ---------- */
+const STYLES=[
+ {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân cục',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:18,topN:7,linkW:100,linkT:18,linkN:3,blkA:100,blkB:100,blkH:90,blkNL:3,blkNW:3,botW:100,botT:18,botN:5,dyn:1500,sta:3000},
+ {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:100,topT:18,topN:7,linkW:100,linkT:18,linkN:3,blkA:100,blkB:100,blkH:90,blkNL:3,blkNW:3,botW:100,botT:18,botN:3,dyn:1000,sta:2000},
+ {id:'stringer',label:'Pallet 1 mặt 2 chiều - đà liền',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
+ {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân (đà)',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
+ {id:'collar',label:'Khung gỗ pallet (collar)',name:'KHUNG GỖ PALLET',engine:'collar',faces:1,colT:20,colH:195},
+];
+/* ---------- KHỔ / TIÊU CHUẨN (chỉ đổi kích thước) ---------- */
+const SIZES=[
+ {id:'1100',label:'1100 x 1100 (phổ thông)',L:1100,W:1100},
+ {id:'1200x1000',label:'1200 x 1000',L:1200,W:1000},
+ {id:'1219x1016',label:'1219 x 1016',L:1219,W:1016},
+ {id:'epal-eu',label:'EPAL EU 1200 x 800',L:1200,W:800,blkA:145,blkH:78,topN:7},
+ {id:'epal2',label:'EPAL 2 - 1200 x 1000',L:1200,W:1000,blkA:145,blkH:100,topN:8},
+ {id:'epal3',label:'EPAL 3 - 1000 x 1200',L:1000,W:1200,blkA:145,blkH:78,topN:7},
+ {id:'epal6',label:'EPAL 6 - 800 x 600 (nửa)',L:800,W:600,blkA:145,blkH:78,topN:5},
+ {id:'cp1',label:'EPAL CP1 - 1000 x 1200',L:1000,W:1200,blkA:145,blkH:78,topN:6},
+ {id:'cp2',label:'EPAL CP2 - 1140 x 1140',L:1140,W:1140,blkA:145,blkH:78,topN:9,botN:5},
+ {id:'cp4',label:'EPAL CP4 - 1300 x 1100',L:1300,W:1100,blkA:145,blkH:78,topN:8},
+ {id:'loscam-a',label:'Loscam Á - 1000 x 1200',L:1000,W:1200,blkH:100},
+ {id:'loscam-cn',label:'Loscam TQ - 1200 x 1000',L:1200,W:1000,blkH:100},
+];
+function buildPresetMenu(){
+  const ss=$('style'); STYLES.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.label;ss.appendChild(o);});
+  const sz=$('size'); SIZES.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.label;sz.appendChild(o);});
+}
+const set=(id,v)=>{if(v!==undefined && $(id))$(id).value=v;};
+function curStyle(){return STYLES.find(x=>x.id===$('style').value)||STYLES[0];}
+function refreshTitle(){
+  const s=curStyle(),L=num('L'),W=num('W');
+  const suffix = s.engine==='collar' ? L+'x'+W+'x'+num('colH') : L+'x'+W;
+  set('title', s.name+' '+suffix+'mm');
+}
+function applyStyle(){
+  const p=curStyle();
+  $('engine').value=p.engine; setEngine(p.engine);
+  if(p.faces)$('faces').value=p.faces;
+  ['topW','topT','topN','linkW','linkT','linkN','blkA','blkB','blkH','blkNL','blkNW','botW','botT','botN','strW','strH','strN','colT','colH'].forEach(k=>set(k,p[k]));
+  if($('notch'))$('notch').checked=!!p.notch;
+  if(p.dyn)set('dynLoad',p.dyn); if(p.sta)set('staLoad',p.sta);
+  applySize(true); // áp khổ đang chọn lên kiểu dáng mới
+}
+function applySize(skipStyle){
+  const z=SIZES.find(x=>x.id===$('size').value); if(!z){refreshTitle();render();return;}
+  set('L',z.L);set('W',z.W);
+  // các tinh chỉnh kích thước theo chuẩn (chỉ khi là engine block)
+  if($('engine').value==='block'){['blkA','blkH','topN','botN'].forEach(k=>{if(z[k]!==undefined)set(k,z[k]);});}
+  refreshTitle();render();
+}
+function setEngine(eng){
+  document.querySelectorAll('[data-eng]').forEach(el=>{
+    el.style.display = el.getAttribute('data-eng').split(' ').includes(eng)?'':'none';
+  });
+  $('f-faces').style.display = (eng==='collar')?'none':'';
+}
+
+/* ---------- MODEL BUILDERS ---------- */
+function buildModel(){
+  const eng=$('engine').value;
+  if(eng==='stringer')return buildStringer();
+  if(eng==='collar')return buildCollar();
+  return buildBlock();
+}
+function buildBlock(){
+  const L=num('L'),W=num('W');
+  const topW=num('topW'),topT=num('topT'),topN=num('topN');
+  const linkW=num('linkW'),linkT=num('linkT'),linkN=num('linkN');
+  const blkA=num('blkA'),blkB=num('blkB'),blkH=num('blkH'),blkNL=num('blkNL'),blkNW=num('blkNW');
+  const botW=num('botW'),botT=num('botT'),botN=num('botN');
+  const faces=parseInt($('faces').value);
+  const useBottom = botN>0; // block luôn có nan đáy đỡ chân (1 mặt = 3 thanh chu vi, 2 mặt = sàn đáy)
+  const zBot=0, zBlock=useBottom?botT:0, zLink=zBlock+blkH, zTop=zLink+linkT, Htot=zTop+topT;
+  const boxes=[];
+  if(useBottom)positions(botN,botW,W).forEach(y=>boxes.push({x:0,y,z:zBot,dx:L,dy:botW,dz:botT,kind:'board'}));
+  const xs=positions(blkNL,blkA,L),ys=positions(blkNW,blkB,W);
+  xs.forEach(x=>ys.forEach(y=>boxes.push({x,y,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
+  positions(linkN,linkW,W).forEach(y=>boxes.push({x:0,y,z:zLink,dx:L,dy:linkW,dz:linkT,kind:'board'}));
+  positions(topN,topW,L).forEach(x=>boxes.push({x,y:0,z:zTop,dx:topW,dy:W,dz:topT,kind:'board'}));
+  const cau=[];
+  cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
+  cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+linkN+' nan)']);
+  cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
+  if(useBottom)cau.push(['Nan đáy',botW+'x'+botT+'x'+L+'mm','('+botN+' nan)']);
+  return {L,W,Htot,boxes,cau,faces};
+}
+function buildStringer(){
+  const L=num('L'),W=num('W');
+  const topW=num('topW'),topT=num('topT'),topN=num('topN');
+  const strW=num('strW'),strH=num('strH'),strN=num('strN');
+  const notch=$('notch').checked;
+  const zStr=0, zTop=strH, Htot=zTop+topT;
+  const boxes=[];
+  const ys=positions(strN,strW,W);
+  ys.forEach(y=>{
+    if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
+    else{
+      // 3 chân + 2 hốc khoét
+      const gap=L*0.16, legL=(L-2*gap)/3;
+      [0, legL+gap, 2*(legL+gap)].forEach(x=>boxes.push({x,y,z:zStr,dx:legL,dy:strW,dz:strH,kind:'block'}));
+      // dầm trên đà (mô phỏng phần gỗ còn lại phía trên hốc)
+      boxes.push({x:0,y,z:strH-topT*0.9,dx:L,dy:strW,dz:topT*0.9,kind:'block'});
+    }
+  });
+  positions(topN,topW,L).forEach(x=>boxes.push({x,y:0,z:zTop,dx:topW,dy:W,dz:topT,kind:'board'}));
+  const cau=[];
+  cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
+  cau.push(['Đà dọc',strW+'x'+strH+'x'+L+'mm','('+strN+' đà'+(notch?', khoét chân':'')+')']);
+  return {L,W,Htot,boxes,cau,faces:1};
+}
+function buildCollar(){
+  const L=num('L'),W=num('W'),t=num('colT'),H=num('colH');
+  const boxes=[
+    {x:0,y:0,z:0,dx:L,dy:t,dz:H,kind:'board'},
+    {x:0,y:W-t,z:0,dx:L,dy:t,dz:H,kind:'board'},
+    {x:0,y:0,z:0,dx:t,dy:W,dz:H,kind:'board'},
+    {x:L-t,y:0,z:0,dx:t,dy:W,dz:H,kind:'board'},
+  ];
+  const cau=[['Ván khung',t+'mm dày','(gỗ thông)'],['Chiều cao khung',H+'mm',''],['Bản lề','thép','(gập gọn được)']];
+  return {L,W,Htot:H,boxes,cau,faces:1,collar:true};
+}
+
+/* ---------- ISO RENDER ---------- */
+function proj(x,y,z,s,ox,oy){return {X:ox+(x-y)*COS*s,Y:oy+(x+y)*SIN*s-z*s};}
+function drawBox(ctx,b,s,ox,oy){
+  const {x,y,z,dx,dy,dz,kind}=b,zt=z+dz;
+  const top=kind==='block'?C.blockTop:C.boardTop,right=kind==='block'?C.blockR:C.boardR,left=kind==='block'?C.blockL:C.boardL;
+  function poly(pts,fill){ctx.beginPath();pts.forEach((p,i)=>{const q=proj(p[0],p[1],p[2],s,ox,oy);i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y);});ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle='rgba(60,40,20,.55)';ctx.lineWidth=1;ctx.stroke();}
+  poly([[x,y+dy,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x,y+dy,zt]],left);
+  poly([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],right);
+  poly([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],top);
+}
+function dimLine(ctx,p1,p2,label){
+  ctx.strokeStyle='#27343A';ctx.lineWidth=1.2;ctx.fillStyle='#27343A';
+  ctx.beginPath();ctx.moveTo(p1.X,p1.Y);ctx.lineTo(p2.X,p2.Y);ctx.stroke();
+  [p1,p2].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.5,0,7);ctx.fill();});
+  const mx=(p1.X+p2.X)/2,my=(p1.Y+p2.Y)/2;
+  ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(label,mx,my-10);ctx.fillStyle='#27343A';ctx.fillText(label,mx,my-10);
+}
+function drawPalletInto(ctx,area,m){
+  const {x:ax,y:ay,w:aw,h:ah}=area,L=m.L,W=m.W,H=m.Htot;
+  const corners=[[0,0,0],[L,0,0],[0,W,0],[L,W,0],[0,0,H],[L,0,H],[0,W,H],[L,W,H]];
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  corners.forEach(c=>{const p=proj(c[0],c[1],c[2],1,0,0);minX=Math.min(minX,p.X);maxX=Math.max(maxX,p.X);minY=Math.min(minY,p.Y);maxY=Math.max(maxY,p.Y);});
+  const pad=70,s=Math.min((aw-pad*2)/(maxX-minX),(ah-pad*2)/(maxY-minY));
+  const ox=ax+pad-minX*s+((aw-pad*2)-(maxX-minX)*s)/2, oy=ay+pad-minY*s+((ah-pad*2)-(maxY-minY)*s)/2;
+  [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.y)-(b.x+b.y))).forEach(b=>drawBox(ctx,b,s,ox,oy));
+  let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
+  let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
+  let pe=proj(L,W,0,s,ox,oy),pf=proj(L,W,H,s,ox,oy);pe={X:pe.X+46,Y:pe.Y};pf={X:pf.X+46,Y:pf.Y};
+  ctx.strokeStyle='#27343A';ctx.lineWidth=1.2;ctx.fillStyle='#27343A';ctx.beginPath();ctx.moveTo(pe.X,pe.Y);ctx.lineTo(pf.X,pf.Y);ctx.stroke();
+  [pe,pf].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.5,0,7);ctx.fill();});
+  ctx.save();ctx.translate((pe.X+pf.X)/2+16,(pe.Y+pf.Y)/2);ctx.rotate(-Math.PI/2);ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(Math.round(H)+' mm',0,0);ctx.fillStyle='#27343A';ctx.fillText(Math.round(H)+' mm',0,0);ctx.restore();
+}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function render(){
+  const m=buildModel(),cv=$('sheet'),DPR=2;
+  cv.width=1400*DPR;cv.height=980*DPR;cv.style.aspectRatio='1400/980';
+  const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);const Wd=1400,Hd=980;
+  ctx.clearRect(0,0,Wd,Hd);ctx.fillStyle='#fff';ctx.fillRect(0,0,Wd,Hd);
+  // header
+  ctx.fillStyle='#27343A';ctx.fillRect(0,0,Wd,96);
+  ctx.fillStyle='#fff';ctx.font='800 40px Arial';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText('I',40,48);ctx.fillStyle='#FB7703';ctx.fillText('C',62,48);ctx.fillStyle='#fff';ctx.fillText('D',92,48);
+  ctx.font='600 14px Arial';ctx.fillStyle='#B7C0C7';ctx.fillText('PACKAGING SOLUTIONS',40,74);
+  ctx.textAlign='right';ctx.font='800 26px Arial';ctx.fillStyle='#fff';ctx.fillText($('title').value,Wd-40,42);
+  ctx.font='500 15px Arial';ctx.fillStyle='#FB7703';
+  const tag = m.collar?'Khung gỗ (collar)':('Chất liệu: '+$('material').value+'   •   '+(m.faces===2?'Pallet 2 mặt':'Pallet 1 mặt'));
+  ctx.fillText(tag,Wd-40,72);
+  // left drawing
+  ctx.textAlign='left';ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT',40,128);
+  ctx.fillStyle='#FB7703';ctx.fillRect(40,138,150,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,150,820,720,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  drawPalletInto(ctx,{x:32,y:150,w:820,h:720},m);
+  // right specs
+  const RX=890;
+  ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',RX,128);
+  ctx.fillStyle='#FB7703';ctx.fillRect(RX,138,170,3);
+  const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
+  if(!m.collar){specs.push(['Tải trọng động','~ '+$('dynLoad').value+' kg']);specs.push(['Tải trọng tĩnh','~ '+$('staLoad').value+' kg']);specs.push(['Số mặt sử dụng',m.faces+' mặt']);specs.push(['Độ ẩm',$('moist').value]);specs.push(['Xử lý',$('treat').value]);}
+  let ty=158;
+  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(RX,ty,470,40);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],RX+12,ty+20);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],RX+200,ty+20);ty+=40;});
+  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(RX,158,470,specs.length*40);
+  ty+=34;ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('CẤU TẠO',RX,ty);ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty+10,90,3);ty+=40;
+  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',RX+18,ty+5);ctx.font='500 14px Arial';ctx.fillText(r[1],RX+210,ty+5);ctx.fillStyle='#6B7680';ctx.fillText(r[2],RX+210,ty+24);ty+=44;});
+  // footer
+  ctx.fillStyle='#27343A';ctx.fillRect(0,Hd-56,Wd,56);
+  ctx.fillStyle='#fff';ctx.font='600 14px Arial';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Công ty TNHH Sản xuất Công nghiệp ICD Việt Nam',40,Hd-28);
+  ctx.textAlign='right';ctx.fillStyle='#FB7703';ctx.font='700 14px Arial';ctx.fillText('Hotline: 0983 797 186   •   sales@icdvietnam.com.vn   •   icdvietnam.com.vn',Wd-40,Hd-28);
+}
+function downloadPNG(){render();const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');a.download='ban-ve-'+($('title').value.replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();}
+
+buildPresetMenu();$('size').value='1219x1016';applyStyle();
+</script>
+</body>
+</html>
