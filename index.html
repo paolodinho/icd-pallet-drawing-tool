@@ -164,7 +164,7 @@ function shade(hex,m){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>
 
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
- {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân cục',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'block',faces:2,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:8,dyn:1500,sta:3000},
+ {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân cục',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'block',faces:2,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:5,dyn:1500,sta:3000},
  {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - đà liền',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân (đà)',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
@@ -239,9 +239,9 @@ function buildBlock(){
   const faces=parseInt($('faces').value);
   const zBlock=botT, zLink=zBlock+blkH, zTop=zLink+linkT, Htot=zTop+topT;
   const boxes=[];
-  // MẶT ĐÁY: 2 mặt = sàn đáy đầy đủ (nan chạy theo W, giống mặt trên) | 1 mặt = thanh đỡ chân chạy dọc L
-  if(faces===2){ positions(botN,botW,L).forEach(x=>boxes.push({x,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
-  else { positions(botN,botW,W).forEach(y=>boxes.push({x:0,y,z:0,dx:L,dy:botW,dz:botT,kind:'board'})); }
+  // NAN ĐÁY: luôn chạy dọc theo chiều dài L (song song nan liên kết), mỗi thanh đỡ đủ các hàng chân.
+  // 1 mặt = ít thanh (đỡ chân), 2 mặt = nhiều thanh hơn (mặt đáy dùng được). Số thanh = botN.
+  positions(botN,botW,W).forEach(y=>boxes.push({x:0,y,z:0,dx:L,dy:botW,dz:botT,kind:'board'}));
   const xs=positions(blkNL,blkA,L),ys=positions(blkNW,blkB,W);
   xs.forEach(x=>ys.forEach(y=>boxes.push({x,y,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
   positions(linkN,linkW,W).forEach(y=>boxes.push({x:0,y,z:zLink,dx:L,dy:linkW,dz:linkT,kind:'board'}));
@@ -250,8 +250,8 @@ function buildBlock(){
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
   cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+linkN+' nan)']);
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
-  if(faces===2)cau.push(['Nan đáy (mặt dưới)',botW+'x'+botT+'x'+W+'mm','('+botN+' nan)']);
-  else cau.push(['Thanh đỡ chân',botW+'x'+botT+'x'+L+'mm','('+botN+' thanh)']);
+  if(faces===2)cau.push(['Nan đáy (mặt dưới)',botW+'x'+botT+'x'+L+'mm','('+botN+' nan)']);
+  else cau.push(['Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+botN+' nan)']);
   return {L,W,Htot,boxes,cau,faces};
 }
 function buildStringer(){
