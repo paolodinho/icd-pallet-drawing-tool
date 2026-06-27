@@ -291,11 +291,12 @@ function buildStringer(){
   ys.forEach(y=>{
     if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
     else{
-      // 3 chân + 2 hốc khoét
-      const gap=L*0.16, legL=(L-2*gap)/3;
-      [0, legL+gap, 2*(legL+gap)].forEach(x=>boxes.push({x,y,z:zStr,dx:legL,dy:strW,dz:strH,kind:'block'}));
-      // dầm trên đà (phần gỗ còn lại phía trên hốc)
-      boxes.push({x:0,y,z:zStr+strH-topT*0.9,dx:L,dy:strW,dz:topT*0.9,kind:'block'});
+      // CHÂN SUỐT KHOÉT: 1 chân liền chạy suốt, KHOÉT 2 hốc ở ĐÁY cho càng xe nâng luồn qua (4 chiều).
+      // = dải gỗ LIỀN suốt phía trên + 3 mấu chân ở đáy (2 đầu + giữa), chừa 2 hốc giữa các mấu.
+      const notchH=Math.min(strH*0.55, strH-20);   // chiều sâu hốc khoét (từ đáy lên), chừa dải trên >=20mm
+      const bandH=strH-notchH, seg=L/5;             // 5 đoạn dọc: chân-hốc-chân-hốc-chân
+      boxes.push({x:0,y,z:zStr+notchH,dx:L,dy:strW,dz:bandH,kind:'block'});           // dải liền suốt phía trên
+      [0,2,4].forEach(i=>boxes.push({x:i*seg,y,z:zStr,dx:seg,dy:strW,dz:notchH,kind:'block'})); // 3 mấu chân đáy
     }
   });
   positions(topN,topW,L).forEach(x=>boxes.push({x,y:0,z:zTop,dx:topW,dy:W,dz:topT,kind:'board'}));
