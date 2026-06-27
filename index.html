@@ -347,7 +347,7 @@ function drawPalletInto(ctx,area,m){
   // đổ bóng nền
   const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
   ctx.save();ctx.fillStyle='rgba(40,30,15,.12)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+14,q.Y+18):ctx.moveTo(q.X+14,q.Y+18));ctx.closePath();ctx.fill();ctx.restore();
-  [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.y)-(b.x+b.y))).forEach(b=>drawBox(ctx,b,s,ox,oy));
+  [...m.boxes].sort((a,b)=>((a.x+a.y)-(b.x+b.y))||(a.z-b.z)).forEach(b=>drawBox(ctx,b,s,ox,oy));
   let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
   let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
   let pe=proj(L,W,0,s,ox,oy),pf=proj(L,W,H,s,ox,oy);pe={X:pe.X+46,Y:pe.Y};pf={X:pf.X+46,Y:pf.Y};
