@@ -154,7 +154,7 @@
 
 <script src="assets/logo.js"></script>
 <script>
-const A=Math.PI/6,COS=Math.cos(A),SIN=Math.sin(A);
+const A=Math.PI/6,COS=Math.cos(A),SIN=0.40; // SIN thấp hơn 0.5 = camera thấp hơn -> lộ rõ mặt trước + nan đáy dưới chân
 const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();};LOGO.src=window.LOGO_DATA;
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -251,9 +251,9 @@ function buildBlock(){
   // Tâm các CỘT chân (theo chiều rộng W). Mỗi cột chân = 1 nan liên kết trên + 1 nan đáy dưới, CĂN THẲNG cột.
   const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân
   const xs=positions(blkNL,blkA,L);                 // vị trí chân theo chiều dài
-  // NAN ĐÁY - thanh DÀI chạy suốt chiều dài L, 1 thanh / CỘT chân (theo W), đỡ nguyên cột 3 chân -> thấy rõ, liền khối.
-  //  - 2 mặt: sàn đáy đầy đủ (botN thanh kín mặt dưới)
-  //  - 1 mặt: blkNW thanh dài, mỗi thanh căn giữa cột chân, chạy hết chiều dài L
+  // NAN ĐÁY:
+  //  - 2 mặt: sàn đáy đầy đủ (botN thanh ngang kín mặt dưới)
+  //  - 1 mặt: thanh DÀI chạy suốt L, 1 thanh / CỘT chân, đỡ nguyên cột 3 chân (khớp ảnh thật)
   if(faces===2){ positions(botN,botW,L).forEach(x=>boxes.push({x,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
   else { colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'})); }
   // CHÂN CỤC
@@ -268,7 +268,7 @@ function buildBlock(){
   cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+nCol+' nan)']);
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
   if(faces===2)cau.push(['Nan đáy (sàn mặt dưới)',botW+'x'+botT+'x'+W+'mm','('+botN+' nan)']);
-  else cau.push(['Nan đáy (đỡ chân, dọc)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
+  else cau.push(['Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
   const xsTop=positions(topN,topW,L), gap=topN>1?(L-topN*topW)/(topN-1):0;
   const adims=[
     ...topEdgeDims(xsTop,topW,gap,Htot),
