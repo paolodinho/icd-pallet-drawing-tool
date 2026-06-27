@@ -251,11 +251,11 @@ function buildBlock(){
   // Tâm các CỘT chân (theo chiều rộng W). Mỗi cột chân = 1 nan liên kết trên + 1 nan đáy dưới, CĂN THẲNG cột.
   const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân
   const xs=positions(blkNL,blkA,L);                 // vị trí chân theo chiều dài
-  // NAN ĐÁY:
-  //  - 2 mặt: SÀN ĐÁY đầy đủ (nan chạy ngang như sàn trên) -> kín mặt dưới
-  //  - 1 mặt: 1 nan dọc / cột chân, căn giữa cột -> mọi chân tì lên nan đáy (không rời)
+  // NAN ĐÁY - chạy NGANG (song song nan mặt trên), mỗi thanh đỡ NGUYÊN 1 HÀNG 3 chân -> liền khối, không rời.
+  //  - 2 mặt: sàn đáy đầy đủ (botN thanh kín mặt dưới)
+  //  - 1 mặt: đúng số HÀNG chân (blkNL thanh), mỗi thanh căn giữa hàng chân, span hết chiều rộng W
   if(faces===2){ positions(botN,botW,L).forEach(x=>boxes.push({x,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
-  else { colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'})); }
+  else { xs.forEach(cx=>boxes.push({x:cx+blkA/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
   // CHÂN CỤC
   xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
   // NAN LIÊN KẾT: 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
@@ -268,7 +268,7 @@ function buildBlock(){
   cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+nCol+' nan)']);
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
   if(faces===2)cau.push(['Nan đáy (sàn mặt dưới)',botW+'x'+botT+'x'+W+'mm','('+botN+' nan)']);
-  else cau.push(['Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
+  else cau.push(['Nan đáy (đỡ chân, ngang)',botW+'x'+botT+'x'+W+'mm','('+blkNL+' nan)']);
   const xsTop=positions(topN,topW,L), gap=topN>1?(L-topN*topW)/(topN-1):0;
   const adims=[
     ...topEdgeDims(xsTop,topW,gap,Htot),
@@ -352,7 +352,8 @@ function drawPalletInto(ctx,area,m){
   // bóng nền rất nhạt (xám) cho có chiều sâu, không màu nâu
   const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
   ctx.save();ctx.fillStyle='rgba(39,52,58,.06)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+12,q.Y+16):ctx.moveTo(q.X+12,q.Y+16));ctx.closePath();ctx.fill();ctx.restore();
-  [...m.boxes].sort((a,b)=>((a.x+a.dx/2+a.y+a.dy/2)-(b.x+b.dx/2+b.y+b.dy/2))||(a.z-b.z)).forEach(b=>drawBox(ctx,b,s,ox,oy));
+  // Vẽ theo LỚP từ dưới lên (z trước), trong cùng lớp thì xa -> gần (x+y) -> xếp chồng đúng, không có thanh "bay".
+  [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.dx/2+a.y+a.dy/2)-(b.x+b.dx/2+b.y+b.dy/2))).forEach(b=>drawBox(ctx,b,s,ox,oy));
   let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
   let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
   let pe=proj(L,W,0,s,ox,oy),pf=proj(L,W,H,s,ox,oy);pe={X:pe.X+46,Y:pe.Y};pf={X:pf.X+46,Y:pf.Y};
