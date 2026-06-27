@@ -111,13 +111,13 @@
 
     <!-- STRINGER -->
     <div class="grp" data-eng="stringer">
-      <div class="gt">Đà dọc (chạy suốt chiều dài)</div>
+      <div class="gt">Chân suốt (chạy dọc chiều dài)</div>
       <div class="row">
-        <div><label>Rộng đà</label><input id="strW" type="number" value="100"></div>
-        <div><label>Cao đà</label><input id="strH" type="number" value="90"></div>
-        <div><label>Số đà</label><input id="strN" type="number" value="3"></div>
+        <div><label>Rộng chân</label><input id="strW" type="number" value="100"></div>
+        <div><label>Cao chân</label><input id="strH" type="number" value="90"></div>
+        <div><label>Số chân</label><input id="strN" type="number" value="3"></div>
       </div>
-      <div class="chk"><input type="checkbox" id="notch" onchange="render()"><label style="margin:0">Khoét chân (2 hốc/đà → 4 chiều nâng)</label></div>
+      <div class="chk"><input type="checkbox" id="notch" onchange="render()"><label style="margin:0">Khoét chân (2 hốc/chân → 4 chiều nâng)</label></div>
     </div>
 
     <!-- COLLAR -->
@@ -173,10 +173,10 @@ function topEdgeDims(xs,w,gap,Htot){
 
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
- {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - đà kín (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,dyn:1500,sta:3000},
+ {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân suốt (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,dyn:1500,sta:3000},
  {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
- {id:'stringer',label:'Pallet 1 mặt 2 chiều - đà liền',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
- {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân (đà)',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
+ {id:'stringer',label:'Pallet 1 mặt 2 chiều - chân suốt',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
+ {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
  {id:'collar',label:'Khung gỗ pallet (collar)',name:'KHUNG GỖ PALLET',engine:'collar',faces:1,colT:20,colH:195},
 ];
 /* ---------- KHỔ / TIÊU CHUẨN (chỉ đổi kích thước) ---------- */
@@ -301,7 +301,7 @@ function buildStringer(){
   positions(topN,topW,L).forEach(x=>boxes.push({x,y:0,z:zTop,dx:topW,dy:W,dz:topT,kind:'board'}));
   const cau=[];
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
-  cau.push(['Đà dọc',strW+'x'+strH+'x'+L+'mm','('+strN+' đà'+(notch?', khoét chân':'')+')']);
+  cau.push([notch?'Chân khoét (dọc)':'Chân suốt (dọc)',strW+'x'+strH+'x'+L+'mm','('+strN+' chân'+(notch?', khoét 2 hốc':'')+')']);
   if(hasBot)cau.push(['Nan đáy (mặt dưới)',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
   const xsTop=positions(topN,topW,L), gap=topN>1?(L-topN*topW)/(topN-1):0;
   const adims=[
