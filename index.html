@@ -362,37 +362,111 @@ function drawPalletInto(ctx,area,m){
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
+/* ---------- COTE 2D (ngang/dọc) ---------- */
+function hDim(ctx,x1,x2,y,label){
+  if(Math.abs(x2-x1)<3)return;
+  ctx.strokeStyle='#27343A';ctx.fillStyle='#27343A';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x1,y);ctx.lineTo(x2,y);ctx.stroke();
+  [x1,x2].forEach(x=>{ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x,y+4);ctx.stroke();});
+  ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.strokeText(label,(x1+x2)/2,y-3);ctx.fillStyle='#27343A';ctx.fillText(label,(x1+x2)/2,y-3);
+}
+function vDim(ctx,y1,y2,x,label){
+  if(Math.abs(y2-y1)<3)return;
+  ctx.strokeStyle='#27343A';ctx.fillStyle='#27343A';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x,y1);ctx.lineTo(x,y2);ctx.stroke();
+  [y1,y2].forEach(y=>{ctx.beginPath();ctx.moveTo(x-4,y);ctx.lineTo(x+4,y);ctx.stroke();});
+  ctx.save();ctx.translate(x-5,(y1+y2)/2);ctx.rotate(-Math.PI/2);
+  ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+  ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.strokeText(label,0,0);ctx.fillStyle='#27343A';ctx.fillText(label,0,0);ctx.restore();
+}
+// danh sách vị trí x duy nhất của 1 nhóm box (sắp tăng)
+function uniqX(boxes){const xs=[...new Set(boxes.map(b=>Math.round(b.x)))].sort((a,b)=>a-b);return xs;}
+
+/* HÌNH CHIẾU BẰNG (nhìn từ trên) */
+function draw2DTop(ctx,area,m){
+  const {x:ax,y:ay,w:aw,h:ah}=area,L=m.L,W=m.W,pad=52;
+  const s=Math.min((aw-pad*2)/L,(ah-pad*2)/W);
+  const dw=L*s,dh=W*s,px=ax+(aw-dw)/2,py=ay+(ah-dh)/2;
+  const X=x=>px+x*s,Y=y=>py+y*s;
+  ctx.fillStyle='#FBF7F1';ctx.fillRect(X(0),Y(0),dw,dh);
+  const top=m.boxes.filter(b=>Math.abs((b.z+b.dz)-m.Htot)<0.6).sort((a,b)=>a.x-b.x);
+  ctx.lineWidth=1;
+  top.forEach(b=>{ctx.fillStyle='#E2B179';ctx.strokeStyle='#9c6a30';ctx.fillRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);});
+  ctx.strokeStyle='#C9CDD2';ctx.strokeRect(X(0),Y(0),dw,dh);
+  hDim(ctx,X(0),X(L),Y(W)+26,L+' mm');
+  vDim(ctx,Y(0),Y(W),X(L)+28,W+' mm');
+  if(top.length>1){const a=top[0],b=top[1];hDim(ctx,X(a.x),X(a.x+a.dx),Y(0)-14,Math.round(a.dx)+'');hDim(ctx,X(a.x+a.dx),X(b.x),Y(0)-14,Math.round(b.x-(a.x+a.dx))+'');}
+}
+/* HÌNH CHIẾU CẠNH - cắt lớp (nhìn từ mặt trước, theo chiều dài) */
+function draw2DSide(ctx,area,m){
+  const {x:ax,y:ay,w:aw,h:ah}=area,L=m.L,H=m.Htot,pad=56;
+  const s=Math.min((aw-pad*2)/L,(ah-pad*2)/H);
+  const dw=L*s,dh=H*s,px=ax+(aw-dw)/2,py=ay+(ah-dh)/2;
+  const X=x=>px+x*s,Y=z=>py+(H-z)*s;
+  [...m.boxes].sort((a,b)=>a.z-b.z).forEach(b=>{
+    ctx.fillStyle=b.kind==='block'?'#D8A063':'#E2B179';ctx.strokeStyle='#9c6a30';ctx.lineWidth=1;
+    ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
+  });
+  vDim(ctx,Y(0),Y(H),X(0)-24,Math.round(H)+' mm');
+  hDim(ctx,X(0),X(L),Y(0)+30,L+' mm');
+  // cote chân cục (rộng cục + khe hở + đua biên) cho engine block
+  const blocks=m.boxes.filter(b=>b.kind==='block');
+  if($('engine').value==='block' && blocks.length){
+    const xs=uniqX(blocks), bw=blocks[0].dx, yb=Y(0)+10;
+    if(xs.length>=1)hDim(ctx,X(xs[0]),X(xs[0]+bw),yb,Math.round(bw)+'');
+    if(xs.length>=2)hDim(ctx,X(xs[0]+bw),X(xs[1]),yb,Math.round(xs[1]-(xs[0]+bw))+'');
+    if(xs[0]>0)hDim(ctx,X(0),X(xs[0]),yb,Math.round(xs[0])+'');
+  }
+  // độ dày từng lớp bên phải (theo các mức z duy nhất)
+  const zset=[...new Set(m.boxes.flatMap(b=>[Math.round(b.z),Math.round(b.z+b.dz)]))].sort((a,b)=>a-b);
+  const xr=X(L)+22;
+  for(let i=0;i<zset.length-1;i++){const h=zset[i+1]-zset[i];if(h>=10)vDim(ctx,Y(zset[i]),Y(zset[i+1]),xr,h+'');}
+}
+
+function viewLabel(ctx,x,y,t){ctx.fillStyle='#6B7680';ctx.font='600 13px Arial';ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillText(t,x,y);}
+
 function render(){
   const m=buildModel(),cv=$('sheet'),DPR=2;
-  cv.width=1400*DPR;cv.height=980*DPR;cv.style.aspectRatio='1400/980';
-  const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);const Wd=1400,Hd=980;
+  const Wd=1500,Hd=1160;
+  cv.width=Wd*DPR;cv.height=Hd*DPR;cv.style.aspectRatio=Wd+'/'+Hd;
+  const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
   ctx.clearRect(0,0,Wd,Hd);ctx.fillStyle='#fff';ctx.fillRect(0,0,Wd,Hd);
   // header
   ctx.fillStyle='#27343A';ctx.fillRect(0,0,Wd,96);
-  // logo thật trên nền trắng (fit + canh giữa)
   const pn={x:24,y:14,w:200,h:68,pad:11};
   ctx.fillStyle='#fff';roundRect(ctx,pn.x,pn.y,pn.w,pn.h,8);ctx.fill();
   if(LOGO_OK){const sc=Math.min((pn.w-2*pn.pad)/LOGO.width,(pn.h-2*pn.pad)/LOGO.height);const lw=LOGO.width*sc,lh=LOGO.height*sc;ctx.drawImage(LOGO,pn.x+(pn.w-lw)/2,pn.y+(pn.h-lh)/2,lw,lh);}
   ctx.textAlign='right';ctx.font='800 26px Arial';ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText($('title').value,Wd-40,42);
   ctx.font='500 15px Arial';ctx.fillStyle='#FB7703';
-  const tag = m.collar?'Khung gỗ (collar)':('Chất liệu: '+$('material').value+'   •   '+(m.faces===2?'Pallet 2 mặt':'Pallet 1 mặt'));
+  const tag=m.collar?'Khung gỗ (collar)':('Chất liệu: '+$('material').value+'   •   '+(m.faces===2?'Pallet 2 mặt':'Pallet 1 mặt'));
   ctx.fillText(tag,Wd-40,72);
-  // left drawing
-  ctx.textAlign='left';ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT',40,128);
+  // headings + 3D
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT',40,128);
   ctx.fillStyle='#FB7703';ctx.fillRect(40,138,150,3);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,150,820,720,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  drawPalletInto(ctx,{x:32,y:150,w:820,h:720},m);
-  // right specs
-  const RX=890;
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,150,760,430,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  viewLabel(ctx,44,170,'Phối cảnh 3D');
+  drawPalletInto(ctx,{x:32,y:158,w:760,h:418},m);
+  // specs (phải)
+  const RX=824,RW=470;
   ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',RX,128);
   ctx.fillStyle='#FB7703';ctx.fillRect(RX,138,170,3);
   const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
   if(!m.collar){specs.push(['Tải trọng động','~ '+$('dynLoad').value+' kg']);specs.push(['Tải trọng tĩnh','~ '+$('staLoad').value+' kg']);specs.push(['Số mặt sử dụng',m.faces+' mặt']);specs.push(['Độ ẩm',$('moist').value]);specs.push(['Xử lý',$('treat').value]);}
   let ty=158;
-  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(RX,ty,470,40);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],RX+12,ty+20);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],RX+200,ty+20);ty+=40;});
-  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(RX,158,470,specs.length*40);
+  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(RX,ty,RW,40);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],RX+12,ty+24);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],RX+200,ty+24);ty+=40;});
+  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(RX,158,RW,specs.length*40);
   ty+=34;ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('CẤU TẠO',RX,ty);ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty+10,90,3);ty+=40;
-  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',RX+18,ty+5);ctx.font='500 14px Arial';ctx.fillText(r[1],RX+210,ty+5);ctx.fillStyle='#6B7680';ctx.fillText(r[2],RX+210,ty+24);ty+=44;});
+  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',RX+18,ty+5);ctx.font='500 14px Arial';ctx.fillText(r[1],RX+220,ty+5);ctx.fillStyle='#6B7680';ctx.fillText(r[2],RX+220,ty+24);ty+=44;});
+  // 2D views
+  ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('HÌNH CHIẾU KỸ THUẬT (CÓ CỐT)',40,610);
+  ctx.fillStyle='#FB7703';ctx.fillRect(40,620,250,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,634,470,440,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  viewLabel(ctx,44,656,'Hình chiếu bằng (nhìn từ trên)');
+  draw2DTop(ctx,{x:40,y:664,w:454,h:402},m);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,522,634,946,440,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  viewLabel(ctx,534,656,'Hình chiếu cạnh - cắt lớp (theo chiều dài)');
+  draw2DSide(ctx,{x:532,y:664,w:926,h:402},m);
   // footer
   ctx.fillStyle='#27343A';ctx.fillRect(0,Hd-56,Wd,56);
   ctx.fillStyle='#fff';ctx.font='600 14px Arial';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Công ty TNHH Sản xuất Công nghiệp ICD Việt Nam',40,Hd-28);
