@@ -251,11 +251,11 @@ function buildBlock(){
   // Tâm các CỘT chân (theo chiều rộng W). Mỗi cột chân = 1 nan liên kết trên + 1 nan đáy dưới, CĂN THẲNG cột.
   const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân
   const xs=positions(blkNL,blkA,L);                 // vị trí chân theo chiều dài
-  // NAN ĐÁY - chạy NGANG (song song nan mặt trên), mỗi thanh đỡ NGUYÊN 1 HÀNG 3 chân -> liền khối, không rời.
+  // NAN ĐÁY - thanh DÀI chạy suốt chiều dài L, 1 thanh / CỘT chân (theo W), đỡ nguyên cột 3 chân -> thấy rõ, liền khối.
   //  - 2 mặt: sàn đáy đầy đủ (botN thanh kín mặt dưới)
-  //  - 1 mặt: đúng số HÀNG chân (blkNL thanh), mỗi thanh căn giữa hàng chân, span hết chiều rộng W
+  //  - 1 mặt: blkNW thanh dài, mỗi thanh căn giữa cột chân, chạy hết chiều dài L
   if(faces===2){ positions(botN,botW,L).forEach(x=>boxes.push({x,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
-  else { xs.forEach(cx=>boxes.push({x:cx+blkA/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'})); }
+  else { colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'})); }
   // CHÂN CỤC
   xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
   // NAN LIÊN KẾT: 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
@@ -268,7 +268,7 @@ function buildBlock(){
   cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+nCol+' nan)']);
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
   if(faces===2)cau.push(['Nan đáy (sàn mặt dưới)',botW+'x'+botT+'x'+W+'mm','('+botN+' nan)']);
-  else cau.push(['Nan đáy (đỡ chân, ngang)',botW+'x'+botT+'x'+W+'mm','('+blkNL+' nan)']);
+  else cau.push(['Nan đáy (đỡ chân, dọc)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
   const xsTop=positions(topN,topW,L), gap=topN>1?(L-topN*topW)/(topN-1):0;
   const adims=[
     ...topEdgeDims(xsTop,topW,gap,Htot),
