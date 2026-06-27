@@ -152,18 +152,20 @@
   </div>
 </div>
 
+<script src="assets/logo.js"></script>
 <script>
 const A=Math.PI/6,COS=Math.cos(A),SIN=Math.sin(A);
+const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();};LOGO.src=window.LOGO_DATA;
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
 function positions(n,w,span){if(n<=1)return [(span-w)/2];const gap=(span-n*w)/(n-1);const a=[];for(let i=0;i<n;i++)a.push(i*(w+gap));return a;}
 
-const C={boardTop:'#E2B179',boardR:'#C68B49',boardL:'#A86E33',blockTop:'#D8A063',blockR:'#B57C40',blockL:'#94632C'};
+function shade(hex,m){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.min(255,r*m)|0;g=Math.min(255,g*m)|0;b=Math.min(255,b*m)|0;return 'rgb('+r+','+g+','+b+')';}
 
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
- {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân cục',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:18,topN:7,linkW:100,linkT:18,linkN:3,blkA:100,blkB:100,blkH:90,blkNL:3,blkNW:3,botW:100,botT:18,botN:5,dyn:1500,sta:3000},
- {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:100,topT:18,topN:7,linkW:100,linkT:18,linkN:3,blkA:100,blkB:100,blkH:90,blkNL:3,blkNW:3,botW:100,botT:18,botN:3,dyn:1000,sta:2000},
+ {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân cục',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'block',faces:2,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1500,sta:3000},
+ {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - đà liền',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân (đà)',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
  {id:'collar',label:'Khung gỗ pallet (collar)',name:'KHUNG GỖ PALLET',engine:'collar',faces:1,colT:20,colH:195},
@@ -172,7 +174,7 @@ const STYLES=[
 const SIZES=[
  {id:'1100',label:'1100 x 1100 (phổ thông)',L:1100,W:1100},
  {id:'1200x1000',label:'1200 x 1000',L:1200,W:1000},
- {id:'1219x1016',label:'1219 x 1016',L:1219,W:1016},
+ {id:'1219x1016',label:'1219 x 1016',L:1219,W:1016,topN:8},
  {id:'epal-eu',label:'EPAL EU 1200 x 800',L:1200,W:800,blkA:145,blkH:78,topN:7},
  {id:'epal2',label:'EPAL 2 - 1200 x 1000',L:1200,W:1000,blkA:145,blkH:100,topN:8},
  {id:'epal3',label:'EPAL 3 - 1000 x 1200',L:1000,W:1200,blkA:145,blkH:78,topN:7},
@@ -286,11 +288,20 @@ function buildCollar(){
 function proj(x,y,z,s,ox,oy){return {X:ox+(x-y)*COS*s,Y:oy+(x+y)*SIN*s-z*s};}
 function drawBox(ctx,b,s,ox,oy){
   const {x,y,z,dx,dy,dz,kind}=b,zt=z+dz;
-  const top=kind==='block'?C.blockTop:C.boardTop,right=kind==='block'?C.blockR:C.boardR,left=kind==='block'?C.blockL:C.boardL;
-  function poly(pts,fill){ctx.beginPath();pts.forEach((p,i)=>{const q=proj(p[0],p[1],p[2],s,ox,oy);i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y);});ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle='rgba(60,40,20,.55)';ctx.lineWidth=1;ctx.stroke();}
-  poly([[x,y+dy,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x,y+dy,zt]],left);
-  poly([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],right);
-  poly([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],top);
+  const base=kind==='block'?'#B07A3E':'#CC9150';
+  const P=(X,Y,Z)=>proj(X,Y,Z,s,ox,oy);
+  function vgrad(pts,c1,c2){const ys=pts.map(p=>p.Y);const g=ctx.createLinearGradient(0,Math.min(...ys),0,Math.max(...ys));g.addColorStop(0,c1);g.addColorStop(1,c2);return g;}
+  function face(pts3,c1,c2){const pts=pts3.map(p=>P(p[0],p[1],p[2]));ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.fillStyle=vgrad(pts,c1,c2);ctx.fill();ctx.strokeStyle='rgba(70,45,20,.5)';ctx.lineWidth=1;ctx.stroke();return pts;}
+  face([[x,y+dy,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x,y+dy,zt]],shade(base,.66),shade(base,.5));   // left
+  face([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],shade(base,.88),shade(base,.72));   // right
+  const tp=face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],shade(base,1.18),shade(base,1.05)); // top
+  // vân gỗ chạy dọc theo chiều dài thanh
+  ctx.save();ctx.beginPath();tp.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.clip();
+  ctx.strokeStyle='rgba(110,72,35,.16)';ctx.lineWidth=1;
+  const n=3;
+  if(dx>=dy){for(let i=1;i<=n;i++){const yy=y+dy*i/(n+1),a=P(x,yy,zt),c=P(x+dx,yy,zt);ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(c.X,c.Y);ctx.stroke();}}
+  else{for(let i=1;i<=n;i++){const xx=x+dx*i/(n+1),a=P(xx,y,zt),c=P(xx,y+dy,zt);ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(c.X,c.Y);ctx.stroke();}}
+  ctx.restore();
 }
 function dimLine(ctx,p1,p2,label){
   ctx.strokeStyle='#27343A';ctx.lineWidth=1.2;ctx.fillStyle='#27343A';
@@ -307,6 +318,9 @@ function drawPalletInto(ctx,area,m){
   corners.forEach(c=>{const p=proj(c[0],c[1],c[2],1,0,0);minX=Math.min(minX,p.X);maxX=Math.max(maxX,p.X);minY=Math.min(minY,p.Y);maxY=Math.max(maxY,p.Y);});
   const pad=70,s=Math.min((aw-pad*2)/(maxX-minX),(ah-pad*2)/(maxY-minY));
   const ox=ax+pad-minX*s+((aw-pad*2)-(maxX-minX)*s)/2, oy=ay+pad-minY*s+((ah-pad*2)-(maxY-minY)*s)/2;
+  // đổ bóng nền
+  const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
+  ctx.save();ctx.fillStyle='rgba(40,30,15,.12)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+14,q.Y+18):ctx.moveTo(q.X+14,q.Y+18));ctx.closePath();ctx.fill();ctx.restore();
   [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.y)-(b.x+b.y))).forEach(b=>drawBox(ctx,b,s,ox,oy));
   let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
   let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
@@ -324,10 +338,10 @@ function render(){
   ctx.clearRect(0,0,Wd,Hd);ctx.fillStyle='#fff';ctx.fillRect(0,0,Wd,Hd);
   // header
   ctx.fillStyle='#27343A';ctx.fillRect(0,0,Wd,96);
-  ctx.fillStyle='#fff';ctx.font='800 40px Arial';ctx.textAlign='left';ctx.textBaseline='middle';
-  ctx.fillText('I',40,48);ctx.fillStyle='#FB7703';ctx.fillText('C',62,48);ctx.fillStyle='#fff';ctx.fillText('D',92,48);
-  ctx.font='600 14px Arial';ctx.fillStyle='#B7C0C7';ctx.fillText('PACKAGING SOLUTIONS',40,74);
-  ctx.textAlign='right';ctx.font='800 26px Arial';ctx.fillStyle='#fff';ctx.fillText($('title').value,Wd-40,42);
+  // logo thật trên nền trắng
+  ctx.fillStyle='#fff';roundRect(ctx,28,18,170,60,8);ctx.fill();
+  if(LOGO_OK){const lw=140,lh=lw*LOGO.height/LOGO.width;ctx.drawImage(LOGO,28+(170-lw)/2,18+(60-lh)/2,lw,lh);}
+  ctx.textAlign='right';ctx.font='800 26px Arial';ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.fillText($('title').value,Wd-40,42);
   ctx.font='500 15px Arial';ctx.fillStyle='#FB7703';
   const tag = m.collar?'Khung gỗ (collar)':('Chất liệu: '+$('material').value+'   •   '+(m.faces===2?'Pallet 2 mặt':'Pallet 1 mặt'));
   ctx.fillText(tag,Wd-40,72);
