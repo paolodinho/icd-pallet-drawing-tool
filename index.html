@@ -173,7 +173,7 @@ function topEdgeDims(xs,w,gap,Htot){
 
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
- {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân cục',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'block',faces:2,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:5,dyn:1500,sta:3000},
+ {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - đà kín (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,dyn:1500,sta:3000},
  {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - đà liền',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân (đà)',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
