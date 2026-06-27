@@ -447,7 +447,8 @@ function draw2DTop(ctx,area,m){
   ctx.strokeStyle='#9aa0a5';ctx.strokeRect(X(0),Y(0),dw,dh);
   hDim(ctx,X(0),X(L),Y(W)+26,L+' mm');
   vDim(ctx,Y(0),Y(W),X(L)+28,W+' mm');
-  if(top.length>1){const a=top[0],b=top[1];hDim(ctx,X(a.x),X(a.x+a.dx),Y(0)-14,Math.round(a.dx)+'');hDim(ctx,X(a.x+a.dx),X(b.x),Y(0)-14,Math.round(b.x-(a.x+a.dx))+'');}
+  // cote rộng nan + khe hở (chỉ cho nan mặt thật: block/stringer; bỏ qua khung gỗ)
+  if(top.length>1 && !m.collar && top[0].dx < m.L*0.6){const a=top[0],b=top[1],gap=b.x-(a.x+a.dx);hDim(ctx,X(a.x),X(a.x+a.dx),Y(0)-14,Math.round(a.dx)+'');if(gap>2)hDim(ctx,X(a.x+a.dx),X(b.x),Y(0)-14,Math.round(gap)+'');}
 }
 /* HÌNH CHIẾU CẠNH - cắt lớp (nhìn từ mặt trước, theo chiều dài) */
 function draw2DSide(ctx,area,m){
