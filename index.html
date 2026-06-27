@@ -159,9 +159,18 @@
       </div>
     </div>
 
+    <div class="grp" style="border-bottom:0;padding-bottom:0">
+      <div class="gt">Nhân viên ICD</div>
+      <div class="row" style="align-items:flex-end">
+        <div style="flex:2"><label>Mật khẩu (dùng không giới hạn, ảnh không watermark)</label><input id="pass" type="password" placeholder="Mật khẩu nhân viên"></div>
+        <div style="flex:1"><button type="button" class="btn-ghost" style="margin:0" onclick="tryUnlock()">Mở khoá</button></div>
+      </div>
+      <div id="lockMsg" class="hint"></div>
+    </div>
+
     <button class="btn-primary" onclick="render()">Vẽ lại bản vẽ</button>
     <button class="btn-ghost" onclick="downloadPNG()">Tải ảnh PNG gửi khách</button>
-    <div class="hint">Chọn kiểu dáng ở trên để điền sẵn. Số nan / số cục nhập bao nhiêu vẽ đúng bấy nhiêu - không sai như AI sinh ảnh.</div>
+    <div class="hint">Chọn kiểu dáng ở trên để điền sẵn. Số nan / số chân nhập bao nhiêu vẽ đúng bấy nhiêu.</div>
   </div>
 
   <div class="panel out">
@@ -538,10 +547,38 @@ function render(){
   ctx.fillStyle='#27343A';ctx.fillRect(0,Hd-56,Wd,56);
   ctx.fillStyle='#fff';ctx.font='600 14px Arial';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Công ty TNHH Sản xuất Công nghiệp ICD Việt Nam',40,Hd-28);
   ctx.textAlign='right';ctx.fillStyle='#FB7703';ctx.font='700 14px Arial';ctx.fillText('Hotline: 0983 797 186   •   sales@icdvietnam.com.vn   •   icdvietnam.com.vn',Wd-40,Hd-28);
+  if(!UNLOCKED)drawWatermark(ctx,Wd,Hd);
 }
-function downloadPNG(){render();const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');a.download='ban-ve-'+($('title').value.replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();}
+/* ===== KHOÁ / WATERMARK ===== */
+function _h(s){let x=5381;for(let i=0;i<s.length;i++){x=((x<<5)+x+s.charCodeAt(i))>>>0;}return x;}
+const PASS_HASH=1282699990;          // hash mật khẩu nhân viên ICD (đổi: thay bằng _h('mật khẩu mới'))
+let UNLOCKED=false; try{UNLOCKED=sessionStorage.getItem('icd_pallet_unlocked')==='1';}catch(e){}
+function setLockUI(){const m=$('lockMsg');if(!m)return;
+  if(UNLOCKED){m.textContent='Đã mở khoá: dùng không giới hạn, ảnh không có watermark.';m.style.color='#2E7D32';}
+  else{m.textContent='Chế độ dùng thử: ảnh có watermark ICD và chỉ tạo 1 ảnh mỗi phiên. Nhân viên ICD nhập mật khẩu để dùng đầy đủ.';m.style.color='#6B7680';}}
+function tryUnlock(){const v=($('pass').value||'').trim();
+  if(_h(v)===PASS_HASH){UNLOCKED=true;try{sessionStorage.setItem('icd_pallet_unlocked','1');}catch(e){};setLockUI();render();}
+  else{const m=$('lockMsg');m.textContent='Mật khẩu chưa đúng. Liên hệ quản lý ICD để được cấp.';m.style.color='#C62828';}}
+function drawWatermark(ctx,W,H){
+  ctx.save();
+  ctx.globalAlpha=0.09;ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);
+  if(LOGO_OK){const lw=300,lh=lw*LOGO.height/LOGO.width;
+    for(let y=-H;y<H;y+=lh+170){for(let x=-W;x<W;x+=lw+120){ctx.drawImage(LOGO,x,y,lw,lh);}}}
+  ctx.restore();
+  ctx.save();ctx.globalAlpha=0.16;ctx.fillStyle='#27343A';ctx.font='800 64px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);ctx.fillText('icdvietnam.com.vn',0,0);ctx.restore();
+}
+function downloadPNG(){
+  if(!UNLOCKED){
+    let n=0;try{n=parseInt(sessionStorage.getItem('icd_pallet_dls')||'0',10)||0;}catch(e){}
+    if(n>=1){alert('Bản dùng thử chỉ tạo 1 ảnh mỗi phiên. Nhân viên ICD nhập mật khẩu để tải không giới hạn và không có watermark.');return;}
+    try{sessionStorage.setItem('icd_pallet_dls',String(n+1));}catch(e){}
+  }
+  render();
+  const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');a.download='ban-ve-'+($('title').value.replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();
+}
 
-buildPresetMenu();$('size').value='1219x1016';applyStyle();
+buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
   if(e.target.id==='style'||e.target.id==='size')return; render();
