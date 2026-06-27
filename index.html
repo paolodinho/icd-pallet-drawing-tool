@@ -252,7 +252,16 @@ function buildBlock(){
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
   if(faces===2)cau.push(['Nan đáy (mặt dưới)',botW+'x'+botT+'x'+L+'mm','('+botN+' nan)']);
   else cau.push(['Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+botN+' nan)']);
-  return {L,W,Htot,boxes,cau,faces};
+  const gap=topN>1?(L-topN*topW)/(topN-1):0;
+  const x0=Math.floor((topN-1)/2)*(topW+gap); // nan ở giữa cạnh cho dễ đọc
+  const adims=[
+    {a:[x0,0,Htot],b:[x0+topW,0,Htot],off:{x:0,y:-24},label:topW+''},
+    {a:[x0+topW,0,Htot],b:[x0+topW+gap,0,Htot],off:{x:0,y:-24},label:Math.round(gap)+''},
+    {a:[L,0,zTop],b:[L,0,Htot],off:{x:30,y:-4},label:topT+''},
+    {a:[L,0,zBlock],b:[L,0,zBlock+blkH],off:{x:30,y:-4},label:blkH+''},
+    {a:[L,0,0],b:[L,0,botT],off:{x:30,y:-4},label:botT+''},
+  ];
+  return {L,W,Htot,boxes,cau,faces,adims};
 }
 function buildStringer(){
   const L=num('L'),W=num('W');
@@ -279,7 +288,15 @@ function buildStringer(){
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
   cau.push(['Đà dọc',strW+'x'+strH+'x'+L+'mm','('+strN+' đà'+(notch?', khoét chân':'')+')']);
   if(hasBot)cau.push(['Nan đáy (mặt dưới)',topW+'x'+topT+'x'+W+'mm','('+topN+' nan)']);
-  return {L,W,Htot,boxes,cau,faces};
+  const gap=topN>1?(L-topN*topW)/(topN-1):0;
+  const x0=Math.floor((topN-1)/2)*(topW+gap);
+  const adims=[
+    {a:[x0,0,Htot],b:[x0+topW,0,Htot],off:{x:0,y:-24},label:topW+''},
+    {a:[x0+topW,0,Htot],b:[x0+topW+gap,0,Htot],off:{x:0,y:-24},label:Math.round(gap)+''},
+    {a:[L,0,zStr],b:[L,0,zStr+strH],off:{x:30,y:-4},label:strH+''},
+    {a:[L,0,zTop],b:[L,0,Htot],off:{x:30,y:-4},label:topT+''},
+  ];
+  return {L,W,Htot,boxes,cau,faces,adims};
 }
 function buildCollar(){
   const L=num('L'),W=num('W'),t=num('colT'),H=num('colH');
@@ -312,13 +329,13 @@ function drawBox(ctx,b,s,ox,oy){
   else{for(let i=1;i<=n;i++){const xx=x+dx*i/(n+1),a=P(xx,y,zt),c=P(xx,y+dy,zt);ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(c.X,c.Y);ctx.stroke();}}
   ctx.restore();
 }
-function dimLine(ctx,p1,p2,label){
-  ctx.strokeStyle='#27343A';ctx.lineWidth=1.2;ctx.fillStyle='#27343A';
+function dimLine(ctx,p1,p2,label,fs){
+  ctx.strokeStyle='#27343A';ctx.lineWidth=1.1;ctx.fillStyle='#27343A';
   ctx.beginPath();ctx.moveTo(p1.X,p1.Y);ctx.lineTo(p2.X,p2.Y);ctx.stroke();
-  [p1,p2].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.5,0,7);ctx.fill();});
+  [p1,p2].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.2,0,7);ctx.fill();});
   const mx=(p1.X+p2.X)/2,my=(p1.Y+p2.Y)/2;
-  ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(label,mx,my-10);ctx.fillStyle='#27343A';ctx.fillText(label,mx,my-10);
+  ctx.font='bold '+(fs||15)+'px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(label,mx,my-9);ctx.fillStyle='#27343A';ctx.fillText(label,mx,my-9);
 }
 function drawPalletInto(ctx,area,m){
   const {x:ax,y:ay,w:aw,h:ah}=area,L=m.L,W=m.W,H=m.Htot;
@@ -337,6 +354,11 @@ function drawPalletInto(ctx,area,m){
   ctx.strokeStyle='#27343A';ctx.lineWidth=1.2;ctx.fillStyle='#27343A';ctx.beginPath();ctx.moveTo(pe.X,pe.Y);ctx.lineTo(pf.X,pf.Y);ctx.stroke();
   [pe,pf].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.5,0,7);ctx.fill();});
   ctx.save();ctx.translate((pe.X+pf.X)/2+16,(pe.Y+pf.Y)/2);ctx.rotate(-Math.PI/2);ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(Math.round(H)+' mm',0,0);ctx.fillStyle='#27343A';ctx.fillText(Math.round(H)+' mm',0,0);ctx.restore();
+  // cote chi tiết (rộng nan, khe hở, độ dày, cao chân...)
+  (m.adims||[]).forEach(d=>{
+    const q1=proj(d.a[0],d.a[1],d.a[2],s,ox,oy),q2=proj(d.b[0],d.b[1],d.b[2],s,ox,oy);
+    dimLine(ctx,{X:q1.X+d.off.x,Y:q1.Y+d.off.y},{X:q2.X+d.off.x,Y:q2.Y+d.off.y},d.label,13);
+  });
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
