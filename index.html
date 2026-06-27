@@ -30,6 +30,7 @@
   .hint{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
   .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
   .chk input{width:auto}
+  .unlock-box{background:#FFF8F2;border:1px solid #FFD9B8;border-left:3px solid #FB7703;border-radius:8px;padding:12px 13px;margin-bottom:14px}
   /* Toàn màn hình bản vẽ */
   #canvasWrap:fullscreen,#canvasWrap:-webkit-full-screen{background:#fff;display:flex;align-items:center;justify-content:center;padding:14px}
   #canvasWrap:fullscreen canvas,#canvasWrap:-webkit-full-screen canvas{width:auto;height:auto;max-width:100%;max-height:100%;border-radius:0}
@@ -65,6 +66,15 @@
 <div class="wrap">
   <div class="panel form">
     <h3>Thông số đầu vào</h3>
+
+    <div class="unlock-box">
+      <div style="font-weight:700;color:#27343A;font-size:14px;margin-bottom:6px">Nhập mật khẩu để dùng đầy đủ tính năng</div>
+      <div class="row" style="align-items:stretch">
+        <div style="flex:2"><input id="pass" type="password" placeholder="Nhập mật khẩu"></div>
+        <div style="flex:1"><button type="button" class="btn-primary" style="margin:0;width:100%" onclick="tryUnlock()">Mở khoá</button></div>
+      </div>
+      <div id="lockMsg" style="font-size:12px;line-height:1.5;margin-top:8px"></div>
+    </div>
 
     <div class="grp">
       <div class="gt">Kiểu dáng</div>
@@ -160,15 +170,6 @@
         <div><label>Độ ẩm</label><input id="moist" value="≤ 18%"></div>
         <div><label>Xử lý</label><input id="treat" value="Sấy tự nhiên"></div>
       </div>
-    </div>
-
-    <div class="grp" style="border-bottom:0;padding-bottom:0">
-      <div class="gt">Nhân viên ICD</div>
-      <div class="row" style="align-items:flex-end">
-        <div style="flex:2"><label>Mật khẩu (dùng không giới hạn, ảnh không watermark)</label><input id="pass" type="password" placeholder="Mật khẩu nhân viên"></div>
-        <div style="flex:1"><button type="button" class="btn-ghost" style="margin:0" onclick="tryUnlock()">Mở khoá</button></div>
-      </div>
-      <div id="lockMsg" class="hint"></div>
     </div>
 
     <button class="btn-primary" onclick="render()">Vẽ lại bản vẽ</button>
@@ -560,11 +561,11 @@ function _h(s){let x=5381;for(let i=0;i<s.length;i++){x=((x<<5)+x+s.charCodeAt(i
 const PASS_HASH=1282699990;          // hash mật khẩu nhân viên ICD (đổi: thay bằng _h('mật khẩu mới'))
 let UNLOCKED=false; try{UNLOCKED=sessionStorage.getItem('icd_pallet_unlocked')==='1';}catch(e){}
 function setLockUI(){const m=$('lockMsg');if(!m)return;
-  if(UNLOCKED){m.textContent='Đã mở khoá: dùng không giới hạn, ảnh không có watermark.';m.style.color='#2E7D32';}
-  else{m.textContent='Chế độ dùng thử: ảnh có watermark ICD và chỉ tạo 1 ảnh mỗi phiên. Nhân viên ICD nhập mật khẩu để dùng đầy đủ.';m.style.color='#6B7680';}}
+  if(UNLOCKED){m.textContent='Đã mở khoá: tải ảnh không giới hạn và không có watermark.';m.style.color='#2E7D32';}
+  else{m.textContent='Không nhập mật khẩu vẫn dùng được bình thường, nhưng ảnh tải về sẽ có watermark và mỗi phiên chỉ tải được 1 ảnh.';m.style.color='#6B7680';}}
 function tryUnlock(){const v=($('pass').value||'').trim();
   if(_h(v)===PASS_HASH){UNLOCKED=true;try{sessionStorage.setItem('icd_pallet_unlocked','1');}catch(e){};setLockUI();render();}
-  else{const m=$('lockMsg');m.textContent='Mật khẩu chưa đúng. Liên hệ quản lý ICD để được cấp.';m.style.color='#C62828';}}
+  else{const m=$('lockMsg');m.textContent='Mật khẩu chưa đúng, vui lòng thử lại.';m.style.color='#C62828';}}
 function drawWatermark(ctx,W,H){
   ctx.save();
   ctx.globalAlpha=0.09;ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);
@@ -577,7 +578,7 @@ function drawWatermark(ctx,W,H){
 function downloadPNG(){
   if(!UNLOCKED){
     let n=0;try{n=parseInt(sessionStorage.getItem('icd_pallet_dls')||'0',10)||0;}catch(e){}
-    if(n>=1){alert('Bản dùng thử chỉ tạo 1 ảnh mỗi phiên. Nhân viên ICD nhập mật khẩu để tải không giới hạn và không có watermark.');return;}
+    if(n>=1){alert('Mỗi phiên chỉ tải được 1 ảnh ở chế độ có watermark. Nhập mật khẩu để tải không giới hạn và không có watermark.');return;}
     try{sessionStorage.setItem('icd_pallet_dls',String(n+1));}catch(e){}
   }
   render();
