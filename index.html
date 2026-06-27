@@ -228,7 +228,13 @@ function applyStyle(){
   $('engine').value=p.engine; setEngine(p.engine);
   if(p.faces)$('faces').value=p.faces;
   ['topW','topT','topN','linkW','linkT','linkN','blkA','blkB','blkH','blkNL','blkNW','botW','botT','botN','strW','strH','strN','colT','colH'].forEach(k=>set(k,p[k]));
-  if($('notch'))$('notch').checked=!!p.notch;
+  if($('notch')){
+    $('notch').checked=!!p.notch;
+    const lockNotch=(p.faces===2);            // 2 mặt 2 chiều = chân suốt kín -> KHÔNG cho khoét chân
+    $('notch').disabled=lockNotch;
+    if(lockNotch)$('notch').checked=false;
+    const chk=$('notch').closest('.chk'); if(chk){chk.style.opacity=lockNotch?'0.4':'1';chk.title=lockNotch?'Loại 2 mặt 2 chiều dùng chân suốt kín, không khoét chân':'';}
+  }
   if(p.dyn)set('dynLoad',p.dyn); if(p.sta)set('staLoad',p.sta);
   applySize(true); // áp khổ đang chọn lên kiểu dáng mới
 }
@@ -300,8 +306,8 @@ function buildStringer(){
   const L=num('L'),W=num('W');
   const topW=num('topW'),topT=num('topT'),topN=num('topN');
   const strW=num('strW'),strH=num('strH'),strN=num('strN');
-  const notch=$('notch').checked;
   const faces=parseInt($('faces').value), hasBot=faces===2;
+  const notch=$('notch').checked && faces!==2;  // chốt: 2 mặt 2 chiều không bao giờ khoét chân
   const zStr=hasBot?topT:0, zTop=zStr+strH, Htot=zTop+topT;
   const boxes=[];
   if(hasBot)positions(topN,topW,L).forEach(x=>boxes.push({x,y:0,z:0,dx:topW,dy:W,dz:topT,kind:'board'})); // sàn đáy
