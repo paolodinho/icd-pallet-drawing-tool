@@ -206,6 +206,9 @@
       <input id="pass" type="password" class="reg-i" style="flex:2" placeholder="Nhập mật khẩu" onkeydown="if(event.key==='Enter')tryUnlock()">
       <button type="button" class="btn-primary" style="flex:1;width:auto;margin:0;white-space:nowrap" onclick="tryUnlock()">Mở khoá</button>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#27343A;margin-top:10px;cursor:pointer;font-weight:500">
+      <input id="rememberPass" type="checkbox" style="width:16px;height:16px;margin:0"> Lưu mật khẩu cho lần sau
+    </label>
     <div id="lockMsg" class="reg-msg"></div>
     <div style="border-top:1px solid #EEF0F2;margin-top:16px;padding-top:14px">
       <button type="button" class="btn-ghost" style="width:100%;margin:0" onclick="dismissEntry()">Vẫn dùng (ảnh có watermark, tối đa 3 ảnh)</button>
@@ -609,7 +612,7 @@ function render(){
 /* ===== KHOÁ / WATERMARK ===== */
 function _h(s){let x=5381;for(let i=0;i<s.length;i++){x=((x<<5)+x+s.charCodeAt(i))>>>0;}return x;}
 const PASS_HASH=1282699990;          // hash mật khẩu nhân viên ICD (đổi: thay bằng _h('mật khẩu mới'))
-let UNLOCKED=false; try{UNLOCKED=sessionStorage.getItem('icd_pallet_unlocked')==='1';}catch(e){}
+let UNLOCKED=false; try{UNLOCKED=(sessionStorage.getItem('icd_pallet_unlocked')==='1')||(localStorage.getItem('icd_pallet_unlocked')==='1');}catch(e){}
 function setLockUI(){const bar=$('unlockBar'),st=$('unlockStatus');if(!bar||!st)return;
   if(UNLOCKED){st.textContent='Đã mở khoá: tải ảnh không giới hạn, không watermark.';bar.classList.add('ok');
     const b=bar.querySelector('.link-btn');if(b)b.style.display='none';}
@@ -619,7 +622,10 @@ function openEntryModal(){$('entryOverlay').classList.add('show');const m=$('loc
   setTimeout(()=>{try{$('pass').focus();}catch(e){}},60);}
 function dismissEntry(){$('entryOverlay').classList.remove('show');try{sessionStorage.setItem('icd_pallet_entry_done','1');}catch(e){}}
 function tryUnlock(){const v=($('pass').value||'').trim();const m=$('lockMsg');
-  if(_h(v)===PASS_HASH){UNLOCKED=true;try{sessionStorage.setItem('icd_pallet_unlocked','1');}catch(e){}
+  if(_h(v)===PASS_HASH){UNLOCKED=true;
+    const remember=$('rememberPass')&&$('rememberPass').checked;
+    try{sessionStorage.setItem('icd_pallet_unlocked','1');
+      if(remember)localStorage.setItem('icd_pallet_unlocked','1');else localStorage.removeItem('icd_pallet_unlocked');}catch(e){}
     $('entryOverlay').classList.remove('show');setLockUI();render();}
   else if(m){m.textContent='Mật khẩu chưa đúng, vui lòng thử lại.';m.style.color='#C62828';}}
 function drawWatermark(ctx,W,H){
