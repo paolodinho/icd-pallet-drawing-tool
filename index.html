@@ -36,7 +36,7 @@
   .link-btn{background:none;border:none;color:#E8610A;font-weight:700;font-size:12.5px;cursor:pointer;padding:0;white-space:nowrap;text-decoration:underline}
   .reg-overlay{display:none;position:fixed;inset:0;background:rgba(20,24,28,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto}
   .reg-overlay.show{display:flex}
-  .reg-box{background:#fff;border-radius:12px;max-width:430px;width:100%;padding:22px 22px 18px;box-shadow:0 18px 50px rgba(0,0,0,.3);margin:auto}
+  .reg-box{background:#fff;border-radius:12px;max-width:430px;width:100%;padding:22px 22px 18px;box-shadow:0 18px 50px rgba(0,0,0,.3);margin:0 auto}
   .reg-title{font-weight:800;font-size:18px;color:#27343A}
   .reg-desc{font-size:13px;color:#6B7680;line-height:1.55;margin:6px 0 14px}
   .reg-l{display:block;font-size:13px;font-weight:600;color:#27343A;margin:10px 0 4px}
@@ -619,8 +619,9 @@ function setLockUI(){const bar=$('unlockBar'),st=$('unlockStatus');if(!bar||!st)
     const b=bar.querySelector('.link-btn');if(b)b.style.display='none';}
   else{st.textContent='Chế độ khách: ảnh có watermark, tối đa 3 ảnh.';bar.classList.remove('ok');
     const b=bar.querySelector('.link-btn');if(b)b.style.display='';}}
+function scrollIntoViewParent(){try{window.scrollTo(0,0);}catch(e){}try{parent.postMessage({icdPalletScroll:1},'*');}catch(e){}}
 function openEntryModal(){$('entryOverlay').classList.add('show');const m=$('lockMsg');if(m)m.textContent='';
-  setTimeout(()=>{try{$('pass').focus();}catch(e){}},60);}
+  scrollIntoViewParent();}
 function dismissEntry(){$('entryOverlay').classList.remove('show');try{sessionStorage.setItem('icd_pallet_entry_done','1');}catch(e){}}
 function tryUnlock(){const v=($('pass').value||'').trim();const m=$('lockMsg');
   if(_h(v)===PASS_HASH){UNLOCKED=true;
@@ -658,7 +659,7 @@ function downloadPNG(){
   doExport();
 }
 function openRegModal(){const o=$('regOverlay');o.classList.add('show');$('regMsg').textContent='';
-  setTimeout(()=>{try{$('regEmail').focus();}catch(e){}},60);}
+  scrollIntoViewParent();}
 function closeRegModal(){$('regOverlay').classList.remove('show');}
 function submitReg(){
   const email=($('regEmail').value||'').trim();
