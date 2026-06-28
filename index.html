@@ -31,6 +31,18 @@
   .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
   .chk input{width:auto}
   .unlock-box{background:#FFF8F2;border:1px solid #FFD9B8;border-left:3px solid #FB7703;border-radius:8px;padding:12px 13px;margin-bottom:14px}
+  .reg-overlay{display:none;position:fixed;inset:0;background:rgba(20,24,28,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto}
+  .reg-overlay.show{display:flex}
+  .reg-box{background:#fff;border-radius:12px;max-width:430px;width:100%;padding:22px 22px 18px;box-shadow:0 18px 50px rgba(0,0,0,.3);margin:auto}
+  .reg-title{font-weight:800;font-size:18px;color:#27343A}
+  .reg-desc{font-size:13px;color:#6B7680;line-height:1.55;margin:6px 0 14px}
+  .reg-l{display:block;font-size:13px;font-weight:600;color:#27343A;margin:10px 0 4px}
+  .reg-l span{color:#C62828}
+  .reg-i{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #D7DBDE;border-radius:8px;font-size:15px}
+  .reg-i:focus{outline:none;border-color:#FB7703}
+  .reg-msg{font-size:13px;line-height:1.5;margin-top:10px;min-height:16px}
+  .reg-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+  .reg-note{font-size:12px;color:#9AA3AB;margin-top:12px;text-align:center}
   /* Toàn màn hình bản vẽ */
   #canvasWrap:fullscreen,#canvasWrap:-webkit-full-screen{background:#fff;display:flex;align-items:center;justify-content:center;padding:14px}
   #canvasWrap:fullscreen canvas,#canvasWrap:-webkit-full-screen canvas{width:auto;height:auto;max-width:100%;max-height:100%;border-radius:0}
@@ -183,6 +195,28 @@
       <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="toggleFull()">Xem toàn màn hình</button>
     </div>
     <div id="canvasWrap"><canvas id="sheet" width="1400" height="980"></canvas></div>
+  </div>
+</div>
+
+<div id="regOverlay" class="reg-overlay">
+  <div class="reg-box">
+    <div class="reg-title">Đăng ký để tải bản vẽ</div>
+    <div class="reg-desc">Vui lòng để lại thông tin để tải ảnh (tối đa 3 ảnh, có watermark ICD). Đội ngũ ICD sẽ hỗ trợ báo giá pallet theo bản vẽ của bạn.</div>
+    <label class="reg-l">Email <span>*</span></label>
+    <input id="regEmail" type="email" class="reg-i" placeholder="ten@congty.com">
+    <label class="reg-l">Số điện thoại <span>*</span></label>
+    <input id="regPhone" type="tel" class="reg-i" placeholder="09xx xxx xxx">
+    <label class="reg-l">Tên công ty <span>*</span></label>
+    <input id="regCompany" type="text" class="reg-i" placeholder="Công ty TNHH ...">
+    <label class="reg-l">Mã số thuế</label>
+    <input id="regMst" type="text" class="reg-i" placeholder="(không bắt buộc)">
+    <input id="regWebsite" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+    <div id="regMsg" class="reg-msg"></div>
+    <div class="reg-actions">
+      <button type="button" class="btn-ghost" style="width:auto;margin:0" onclick="closeRegModal()">Để sau</button>
+      <button type="button" class="btn-primary" style="width:auto;margin:0" id="regSubmit" onclick="submitReg()">Gửi & tải ảnh</button>
+    </div>
+    <div class="reg-note">Hoặc nhập mật khẩu ICD ở khung bên trái để tải không giới hạn, không watermark.</div>
   </div>
 </div>
 
@@ -531,6 +565,7 @@ function render(){
   drawPalletInto(ctx,{x:36,y:160,w:996,h:586},m);
   // ====== THÔNG SỐ + CẤU TẠO (cột phải) ======
   const RX=1062,RW=406;
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
   ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',RX,128);
   ctx.fillStyle='#FB7703';ctx.fillRect(RX,138,170,3);
   const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
@@ -562,7 +597,7 @@ const PASS_HASH=1282699990;          // hash mật khẩu nhân viên ICD (đổ
 let UNLOCKED=false; try{UNLOCKED=sessionStorage.getItem('icd_pallet_unlocked')==='1';}catch(e){}
 function setLockUI(){const m=$('lockMsg');if(!m)return;
   if(UNLOCKED){m.textContent='Đã mở khoá: tải ảnh không giới hạn và không có watermark.';m.style.color='#2E7D32';}
-  else{m.textContent='Không nhập mật khẩu vẫn dùng được bình thường, nhưng ảnh tải về sẽ có watermark và mỗi phiên chỉ tải được 1 ảnh.';m.style.color='#6B7680';}}
+  else{m.textContent='Không nhập mật khẩu vẫn dùng được bình thường. Khi tải ảnh cần đăng ký thông tin; ảnh có watermark và tối đa 3 ảnh.';m.style.color='#6B7680';}}
 function tryUnlock(){const v=($('pass').value||'').trim();
   if(_h(v)===PASS_HASH){UNLOCKED=true;try{sessionStorage.setItem('icd_pallet_unlocked','1');}catch(e){};setLockUI();render();}
   else{const m=$('lockMsg');m.textContent='Mật khẩu chưa đúng, vui lòng thử lại.';m.style.color='#C62828';}}
@@ -575,14 +610,48 @@ function drawWatermark(ctx,W,H){
   ctx.save();ctx.globalAlpha=0.16;ctx.fillStyle='#27343A';ctx.font='800 64px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);ctx.fillText('icdvietnam.com.vn',0,0);ctx.restore();
 }
-function downloadPNG(){
-  if(!UNLOCKED){
-    let n=0;try{n=parseInt(sessionStorage.getItem('icd_pallet_dls')||'0',10)||0;}catch(e){}
-    if(n>=1){alert('Mỗi phiên chỉ tải được 1 ảnh ở chế độ có watermark. Nhập mật khẩu để tải không giới hạn và không có watermark.');return;}
-    try{sessionStorage.setItem('icd_pallet_dls',String(n+1));}catch(e){}
-  }
+const LEAD_URL='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-lead';
+const REG_LIMIT=3;
+function isRegistered(){try{return localStorage.getItem('icd_pallet_reg')==='1';}catch(e){return false;}}
+function regCount(){try{return parseInt(localStorage.getItem('icd_pallet_reg_dls')||'0',10)||0;}catch(e){return 0;}}
+function doExport(){
   render();
-  const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');a.download='ban-ve-'+($('title').value.replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();
+  const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');
+  a.download='ban-ve-'+(($('title').value||'pallet').replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();
+}
+function downloadPNG(){
+  if(UNLOCKED){doExport();return;}                       // nhân viên ICD: không giới hạn, ảnh sạch
+  if(!isRegistered()){openRegModal();return;}            // chưa đăng ký -> hiện form
+  const n=regCount();
+  if(n>=REG_LIMIT){alert('Bạn đã tải đủ '+REG_LIMIT+' ảnh. Vui lòng liên hệ ICD (0983 797 186) để được hỗ trợ, hoặc nhập mật khẩu để tải không giới hạn.');return;}
+  try{localStorage.setItem('icd_pallet_reg_dls',String(n+1));}catch(e){}
+  doExport();
+}
+function openRegModal(){const o=$('regOverlay');o.classList.add('show');$('regMsg').textContent='';
+  setTimeout(()=>{try{$('regEmail').focus();}catch(e){}},60);}
+function closeRegModal(){$('regOverlay').classList.remove('show');}
+function submitReg(){
+  const email=($('regEmail').value||'').trim();
+  const phone=($('regPhone').value||'').trim();
+  const company=($('regCompany').value||'').trim();
+  const mst=($('regMst').value||'').trim();
+  const website=($('regWebsite').value||'').trim(); // honeypot
+  const msg=$('regMsg');
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){msg.style.color='#C62828';msg.textContent='Email chưa hợp lệ.';return;}
+  if(phone.length<8){msg.style.color='#C62828';msg.textContent='Vui lòng nhập số điện thoại.';return;}
+  if(company.length<2){msg.style.color='#C62828';msg.textContent='Vui lòng nhập tên công ty.';return;}
+  const btn=$('regSubmit');btn.disabled=true;msg.style.color='#6B7680';msg.textContent='Đang gửi...';
+  fetch(LEAD_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({email:email,phone:phone,company:company,mst:mst,website:website})})
+   .then(r=>r.json().catch(()=>({ok:r.ok})))
+   .then(d=>{
+     btn.disabled=false;
+     if(d&&d.ok){
+       try{localStorage.setItem('icd_pallet_reg','1');}catch(e){}
+       closeRegModal();doExport();
+     }else{msg.style.color='#C62828';msg.textContent='Gửi chưa thành công, vui lòng kiểm tra lại thông tin.';}
+   })
+   .catch(()=>{btn.disabled=false;msg.style.color='#C62828';msg.textContent='Lỗi kết nối, vui lòng thử lại.';});
 }
 
 function toggleFull(){
