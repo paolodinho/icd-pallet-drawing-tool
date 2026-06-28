@@ -31,6 +31,9 @@
   .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
   .chk input{width:auto}
   .unlock-box{background:#FFF8F2;border:1px solid #FFD9B8;border-left:3px solid #FB7703;border-radius:8px;padding:12px 13px;margin-bottom:14px}
+  .unlock-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#FFF8F2;border:1px solid #FFD9B8;border-left:3px solid #FB7703;border-radius:8px;padding:9px 12px;margin-bottom:14px;font-size:12.5px;color:#6B7680}
+  .unlock-bar.ok{background:#EFF7EF;border-color:#CBE6CB;border-left-color:#2E7D32;color:#2E7D32}
+  .link-btn{background:none;border:none;color:#E8610A;font-weight:700;font-size:12.5px;cursor:pointer;padding:0;white-space:nowrap;text-decoration:underline}
   .reg-overlay{display:none;position:fixed;inset:0;background:rgba(20,24,28,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:24px 14px;overflow:auto}
   .reg-overlay.show{display:flex}
   .reg-box{background:#fff;border-radius:12px;max-width:430px;width:100%;padding:22px 22px 18px;box-shadow:0 18px 50px rgba(0,0,0,.3);margin:auto}
@@ -79,13 +82,9 @@
   <div class="panel form">
     <h3>Thông số đầu vào</h3>
 
-    <div class="unlock-box">
-      <div style="font-weight:700;color:#27343A;font-size:14px;margin-bottom:6px">Nhập mật khẩu để dùng đầy đủ tính năng</div>
-      <div class="row" style="align-items:stretch">
-        <div style="flex:2"><input id="pass" type="password" placeholder="Nhập mật khẩu"></div>
-        <div style="flex:1"><button type="button" class="btn-primary" style="margin:0;width:100%" onclick="tryUnlock()">Mở khoá</button></div>
-      </div>
-      <div id="lockMsg" style="font-size:12px;line-height:1.5;margin-top:8px"></div>
+    <div id="unlockBar" class="unlock-bar">
+      <span id="unlockStatus">Chế độ khách: ảnh có watermark, tối đa 3 ảnh.</span>
+      <button type="button" class="link-btn" onclick="openEntryModal()">Nhập mật khẩu</button>
     </div>
 
     <div class="grp">
@@ -195,6 +194,22 @@
       <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="toggleFull()">Xem toàn màn hình</button>
     </div>
     <div id="canvasWrap"><canvas id="sheet" width="1400" height="980"></canvas></div>
+  </div>
+</div>
+
+<div id="entryOverlay" class="reg-overlay">
+  <div class="reg-box">
+    <div class="reg-title">Chọn cách sử dụng công cụ</div>
+    <div class="reg-desc">Công cụ tạo bản vẽ pallet gỗ của ICD Việt Nam. Bạn có thể dùng ngay, hoặc nhập mật khẩu để dùng đầy đủ tính năng.</div>
+    <label class="reg-l">Nhập mật khẩu để dùng đầy đủ (ảnh không watermark, tải không giới hạn)</label>
+    <div class="row" style="align-items:stretch;gap:10px">
+      <input id="pass" type="password" class="reg-i" style="flex:2" placeholder="Nhập mật khẩu" onkeydown="if(event.key==='Enter')tryUnlock()">
+      <button type="button" class="btn-primary" style="flex:1;width:auto;margin:0;white-space:nowrap" onclick="tryUnlock()">Mở khoá</button>
+    </div>
+    <div id="lockMsg" class="reg-msg"></div>
+    <div style="border-top:1px solid #EEF0F2;margin-top:16px;padding-top:14px">
+      <button type="button" class="btn-ghost" style="width:100%;margin:0" onclick="dismissEntry()">Vẫn dùng (ảnh có watermark, tối đa 3 ảnh)</button>
+    </div>
   </div>
 </div>
 
@@ -595,12 +610,18 @@ function render(){
 function _h(s){let x=5381;for(let i=0;i<s.length;i++){x=((x<<5)+x+s.charCodeAt(i))>>>0;}return x;}
 const PASS_HASH=1282699990;          // hash mật khẩu nhân viên ICD (đổi: thay bằng _h('mật khẩu mới'))
 let UNLOCKED=false; try{UNLOCKED=sessionStorage.getItem('icd_pallet_unlocked')==='1';}catch(e){}
-function setLockUI(){const m=$('lockMsg');if(!m)return;
-  if(UNLOCKED){m.textContent='Đã mở khoá: tải ảnh không giới hạn và không có watermark.';m.style.color='#2E7D32';}
-  else{m.textContent='Không nhập mật khẩu vẫn dùng được bình thường. Khi tải ảnh cần đăng ký thông tin; ảnh có watermark và tối đa 3 ảnh.';m.style.color='#6B7680';}}
-function tryUnlock(){const v=($('pass').value||'').trim();
-  if(_h(v)===PASS_HASH){UNLOCKED=true;try{sessionStorage.setItem('icd_pallet_unlocked','1');}catch(e){};setLockUI();render();}
-  else{const m=$('lockMsg');m.textContent='Mật khẩu chưa đúng, vui lòng thử lại.';m.style.color='#C62828';}}
+function setLockUI(){const bar=$('unlockBar'),st=$('unlockStatus');if(!bar||!st)return;
+  if(UNLOCKED){st.textContent='Đã mở khoá: tải ảnh không giới hạn, không watermark.';bar.classList.add('ok');
+    const b=bar.querySelector('.link-btn');if(b)b.style.display='none';}
+  else{st.textContent='Chế độ khách: ảnh có watermark, tối đa 3 ảnh.';bar.classList.remove('ok');
+    const b=bar.querySelector('.link-btn');if(b)b.style.display='';}}
+function openEntryModal(){$('entryOverlay').classList.add('show');const m=$('lockMsg');if(m)m.textContent='';
+  setTimeout(()=>{try{$('pass').focus();}catch(e){}},60);}
+function dismissEntry(){$('entryOverlay').classList.remove('show');try{sessionStorage.setItem('icd_pallet_entry_done','1');}catch(e){}}
+function tryUnlock(){const v=($('pass').value||'').trim();const m=$('lockMsg');
+  if(_h(v)===PASS_HASH){UNLOCKED=true;try{sessionStorage.setItem('icd_pallet_unlocked','1');}catch(e){}
+    $('entryOverlay').classList.remove('show');setLockUI();render();}
+  else if(m){m.textContent='Mật khẩu chưa đúng, vui lòng thử lại.';m.style.color='#C62828';}}
 function drawWatermark(ctx,W,H){
   ctx.save();
   ctx.globalAlpha=0.09;ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);
@@ -663,6 +684,7 @@ function toggleFull(){
   else alert('Trình duyệt không hỗ trợ toàn màn hình.');
 }
 buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();
+if(!UNLOCKED){openEntryModal();}   // vào trang: hiện popup chọn cách dùng
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
   if(e.target.id==='style'||e.target.id==='size')return; render();
