@@ -158,11 +158,19 @@
       </div>
       <div class="chk"><input type="checkbox" id="topRot" onchange="updateBotGroup();render()"><label style="margin:0">Đổi chiều nan trên (xoay 90&deg; - chạy theo chiều dài L)</label></div>
       <div class="row" style="margin-top:6px">
-        <div><label>Nhóm (nan/nhóm)</label><input id="topGroup" type="number" value="1" min="1" oninput="render()"></div>
-        <div><label>Khe trong nhóm (mm)</label><input id="topGap" type="number" value="0" min="0" oninput="render()"></div>
-        <div></div>
+        <div style="flex:0 0 34%"><label>Nan/nhóm</label><input id="topGroup" type="number" value="1" min="1" oninput="render()"></div>
+        <div><label>Tự tính khe</label>
+          <select id="topGapAuto" onchange="render()">
+            <option value="in">Khe trong (auto)</option>
+            <option value="out">Khe ngoài (auto)</option>
+          </select>
+        </div>
       </div>
-      <div style="font-size:10px;color:#888;margin-top:2px">Nhóm=1: dàn đều. Nhóm=2, khe=20: 2 nan sát nhau (cách 20mm) thành 1 cặp, các cặp dàn đều.</div>
+      <div class="row" style="margin-top:6px">
+        <div><label>Khe ngoài (mm)</label><input id="topGapOut" type="number" value="40" min="0" oninput="render()"></div>
+        <div><label>Khe trong (mm)</label><input id="topGap" type="number" value="0" min="0" oninput="render()"></div>
+      </div>
+      <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.45">Nhóm=1: dàn đều (bỏ qua khe). Nhóm≥2: nhập <b>khe ngoài</b> (giữa các nhóm), tool tự tính <b>khe trong</b> cho vừa khít chiều dài/rộng pallet. Ô bị mờ là ô tool đang tự tính.</div>
     </div>
 
     <!-- NAN LIÊN KẾT (block luôn có; stringer chỉ khi đổi chiều nan trên) -->
@@ -199,10 +207,10 @@
         <div><label>Cao h</label><input id="blkH" type="number" value="80"></div>
       </div>
     </div>
-    <div class="grp" data-eng="block stringer">
-      <div class="gt">Vát đáy chân</div>
+    <div class="grp" data-eng="block stringer collar">
+      <div class="gt">Vát cạnh góc</div>
       <div class="row">
-        <div><label>Vát đáy chân (mm) <span style="color:#aaa;font-size:10px">0 = không vát - áp cho mọi kiểu chân</span></label><input id="blkChamfer" type="number" value="0" min="0" oninput="render()"></div>
+        <div><label>Vát cạnh góc (mm) <span style="color:#aaa;font-size:10px">0 = không vát. Cắt 45° cạnh đứng 4 góc, xuyên mọi lớp (kiểu EPAL)</span></label><input id="blkChamfer" type="number" value="0" min="0" oninput="render()"></div>
       </div>
     </div>
     <div class="grp" id="g-bot" data-eng="block stringer">
@@ -367,21 +375,47 @@ const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
 function positions(n,w,span){if(n<=1)return [(span-w)/2];const gap=(span-n*w)/(n-1);const a=[];for(let i=0;i<n;i++)a.push(i*(w+gap));return a;}
-// Vị trí nan theo NHÓM: mỗi nhóm G nan (khe trong nhóm = ig), khoảng cách giữa các nhóm tự dàn đều cho kín span.
-function groupedPositions(n,w,span,G,ig){
-  G=Math.max(1,Math.round(G||1)); ig=Math.max(0,ig||0);
-  if(G<=1||G>=n) return positions(n,w,span);             // G=1 hoặc 1 nhóm -> dàn đều như cũ
+// Giải 2 khe: khe trong nhóm (ig) + khe ngoài nhóm (og). 1 cái do người dùng nhập, cái còn lại
+// TỰ TÍNH để tổng vừa khít span (chiều dài/rộng pallet) -> không bao giờ phi logic.
+// am='in'  -> ig tự tính (mặc định, người dùng nhập og).  am='out' -> og tự tính (người dùng nhập ig).
+function resolveGroupGaps(n,w,span,G,ig,og,am){
+  G=Math.max(1,Math.round(G||1));
   const groups=Math.ceil(n/G);
   let innerCount=0; for(let g=0;g<groups;g++){innerCount+=Math.min(G,n-g*G)-1;}
-  const between=(span-n*w-innerCount*ig)/(groups-1);     // khe giữa các nhóm (auto)
-  const a=[]; let x=0;
-  for(let g=0;g<groups;g++){const k=Math.min(G,n-g*G);
-    for(let i=0;i<k;i++){a.push(x); x+=w; if(i<k-1)x+=ig;}
-    if(g<groups-1)x+=between;
+  const betweenCount=groups-1;
+  ig=Math.max(0,ig||0); og=Math.max(0,og||0);
+  const free=span-n*w;                                  // tổng khe có thể dùng
+  if(am==='out'){
+    if(betweenCount>0){ og=(free-innerCount*ig)/betweenCount; if(og<0)og=0; }
+  }else{
+    if(innerCount>0){ ig=(free-betweenCount*og)/innerCount; if(ig<0)ig=0; }
   }
-  return a;
+  return {G,groups,innerCount,betweenCount,ig,og};
 }
-
+// Vị trí nan theo NHÓM: mỗi nhóm G nan, khe trong nhóm = ig, khe giữa các nhóm = og (1 trong 2 tự tính theo am).
+function groupedPositions(n,w,span,G,ig,og,am){
+  G=Math.max(1,Math.round(G||1));
+  if(G<=1||G>=n) return positions(n,w,span);             // G=1 hoặc 1 nhóm -> dàn đều như cũ
+  const r=resolveGroupGaps(n,w,span,G,ig,og,am||'in');
+  const a=[]; let x=0;
+  for(let g=0;g<r.groups;g++){const k=Math.min(G,n-g*G);
+    for(let i=0;i<k;i++){a.push(x); x+=w; if(i<k-1)x+=r.ig;}
+    if(g<r.groups-1)x+=r.og;
+  }
+  const off=(span-x)/2;                                  // căn giữa (khi khe nhập tay làm tràn/hụt span)
+  return a.map(v=>v+off);
+}
+function topGapMode(){return ($('topGapAuto')&&$('topGapAuto').value)||'in';}
+// Khoá ô khe đang ở chế độ TỰ TÍNH (làm mờ + chỉ đọc) và ghi giá trị tool tính vào đó để người dùng thấy.
+function updateGapUI(){
+  const inEl=$('topGap'),outEl=$('topGapOut'); if(!inEl||!outEl)return;
+  const am=topGapMode(), autoEl=am==='in'?inEl:outEl, manEl=am==='in'?outEl:inEl;
+  autoEl.disabled=true; autoEl.style.background='#F4F5F7'; autoEl.title='Tool tự tính theo chiều dài/rộng pallet';
+  manEl.disabled=false; manEl.style.background=''; manEl.title='';
+  const span=($('topRot')&&$('topRot').checked)?num('W'):num('L');
+  const r=resolveGroupGaps(num('topN'),num('topW'),span,num('topGroup'),num('topGap'),num('topGapOut'),am);
+  if(document.activeElement!==autoEl) autoEl.value=Math.round(am==='in'?r.ig:r.og);
+}
 function shade(hex,m){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.min(255,r*m)|0;g=Math.min(255,g*m)|0;b=Math.min(255,b*m)|0;return 'rgb('+r+','+g+','+b+')';}
 // Cote cho TỪNG nan mặt + TỪNG khe hở dọc cạnh trên (kiểu mẫu gửi khách 2): nan ở hàng thấp, khe ở hàng cao để không đè nhau.
 function topEdgeDims(xs,w,gap,Htot){
@@ -394,16 +428,16 @@ function topEdgeDims(xs,w,gap,Htot){
 }
 // Đặt nan sàn theo hướng. rot=false -> nan chạy theo chiều RỘNG W (trải đều dọc L) [mặc định].
 // rot=true -> nan chạy theo chiều DÀI L (trải đều ngang W).
-function deck(rot,N,bw,bt,z,L,W,G,ig){
+function deck(rot,N,bw,bt,z,L,W,G,ig,og,am){
   const a=[]; const span=rot?W:L;
-  const pos=groupedPositions(N,bw,span,G,ig);
+  const pos=groupedPositions(N,bw,span,G,ig,og,am);
   if(rot){ pos.forEach(y=>a.push({x:0,y,z,dx:L,dy:bw,dz:bt,kind:'board'})); }
   else   { pos.forEach(x=>a.push({x,y:0,z,dx:bw,dy:W,dz:bt,kind:'board'})); }
   return a;
 }
 // Cote rộng nan + khe hở theo hướng đặt nan (đo trên cạnh tương ứng). Hỗ trợ nhóm nan (G, ig).
-function deckDims(rot,N,bw,L,W,Htot,G,ig){
-  const span=rot?W:L, pos=groupedPositions(N,bw,span,G,ig);
+function deckDims(rot,N,bw,L,W,Htot,G,ig,og,am){
+  const span=rot?W:L, pos=groupedPositions(N,bw,span,G,ig,og,am);
   if(!rot){ const d=[],OFF=-24;
     pos.forEach((x,i)=>{ d.push({a:[x,0,Htot],b:[x+bw,0,Htot],off:{x:0,y:OFF},label:Math.round(bw)+'',wit:1});
       if(i<pos.length-1){const gap=pos[i+1]-(x+bw); d.push({a:[x+bw,0,Htot],b:[pos[i+1],0,Htot],off:{x:0,y:OFF},label:Math.round(gap)+'',wit:1});}});
@@ -597,16 +631,31 @@ function updateBotGroup(){
 /* ---------- MODEL BUILDERS ---------- */
 function buildModel(){
   const eng=$('engine').value;
-  if(eng==='stringer')return buildStringer();
-  if(eng==='collar')return buildCollar();
-  return buildBlock();
+  let m;
+  if(eng==='stringer')m=buildStringer();
+  else if(eng==='collar')m=buildCollar();
+  else m=buildBlock();
+  return applyCornerCuts(m, num('blkChamfer')||0);
+}
+// VÁT CẠNH GÓC: cắt 45° cạnh đứng tại 4 góc pallet (0/L × 0/W), áp cho MỌI box chạm góc
+// (nan trên, nan liên kết, cục đố, nan dưới). Box nào có góc trùng góc pallet -> đánh dấu cut góc đó.
+function applyCornerCuts(m,ch){
+  if(!(ch>0))return m;
+  const L=m.L,W=m.W,eps=2;
+  m.boxes.forEach(b=>{
+    if(b.kind!=='board' && b.kind!=='block')return;   // bỏ qua chân khoét (notch)
+    const x0=b.x,x1=b.x+b.dx,y0=b.y,y1=b.y+b.dy;
+    const aL0=Math.abs(x0)<=eps,aL1=Math.abs(x1-L)<=eps,aW0=Math.abs(y0)<=eps,aW1=Math.abs(y1-W)<=eps;
+    const cut={sw:aL0&&aW0, se:aL1&&aW0, ne:aL1&&aW1, nw:aL0&&aW1};
+    if(cut.sw||cut.se||cut.ne||cut.nw){ b.cut=cut; b.ch=Math.min(ch, Math.min(b.dx,b.dy)/2-0.5); }
+  });
+  return m;
 }
 function buildBlock(){
   const L=num('L'),W=num('W');
   const topW=num('topW'),topT=num('topT'),topN=num('topN');
   const linkW=num('linkW'),linkT=num('linkT'),linkN=num('linkN');
   const blkA=num('blkA'),blkB=num('blkB'),blkH=num('blkH'),blkNL=num('blkNL'),blkNW=num('blkNW');
-  const blkChamfer=num('blkChamfer')||0;
   const botW=num('botW'),botT=num('botT'),botN=num('botN');
   const faces=parseInt($('faces').value);
   const topRot=$('topRot')&&$('topRot').checked, botRot=$('botRot')&&$('botRot').checked;
@@ -630,11 +679,11 @@ function buildBlock(){
     xs.forEach(bx=>boxes.push({x:bx+blkA/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'}));
   }
   // CHÂN CỤC (số lượng = blkNL x blkNW, tùy chỉnh được)
-  xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block',chamfer:blkChamfer})));
+  xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
   // NAN LIÊN KẾT (nan gánh): rải đều linkN thanh theo hướng linkRot
   boxes.push(...deck(linkRot,linkN,linkW,linkT,zLink,L,W));
   // NAN MẶT TRÊN: hướng theo topRot
-  boxes.push(...deck(topRot,topN,topW,topT,zTop,L,W,num('topGroup'),num('topGap')));
+  boxes.push(...deck(topRot,topN,topW,topT,zTop,L,W,num('topGroup'),num('topGap'),num('topGapOut'),topGapMode()));
   const nCol=blkNW;
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
@@ -644,7 +693,7 @@ function buildBlock(){
   else { cau.push([nCol+' Giằng đáy dọc',L+'x'+botW+'x'+botT+'mm']);
          cau.push([blkNL+' Giằng đáy ngang',W+'x'+botW+'x'+botT+'mm']); }
   const adims=[
-    ...deckDims(topRot,topN,topW,L,W,Htot,num('topGroup'),num('topGap')),
+    ...deckDims(topRot,topN,topW,L,W,Htot,num('topGroup'),num('topGap'),num('topGapOut'),topGapMode()),
     {a:[L,0,zTop],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
     {a:[L,0,zLink],b:[L,0,zLink+linkT],off:{x:34,y:0},label:linkT+'',wit:1},
     {a:[L,0,zBlock],b:[L,0,zBlock+blkH],off:{x:34,y:0},label:blkH+'',wit:1},
@@ -665,12 +714,11 @@ function buildStringer(){
   const bearer=topRot;
   const linkN=num('linkN')||3, linkW=num('linkW')||topW, linkT=num('linkT')||topT;
   const zStr=hasBot?botT:0, strTop=zStr+strH, zDeck=strTop+(bearer?linkT:0), Htot=zDeck+topT;
-  const strChamfer=Math.max(0, Math.min(num('blkChamfer')||0, strH-4)); // vát đáy chân suốt (áp mọi kiểu, mặc định 0)
   const boxes=[];
   if(hasBot)boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); // sàn đáy
   const ys=positions(strN,strW,W);
   ys.forEach(y=>{
-    if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block',chamfer:strChamfer}); }
+    if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
     else{
       // CHÂN SUỐT KHOÉT: 1 chân liền chạy suốt, KHOÉT 2 HỐC ở ĐÁY cho càng xe nâng luồn qua (4 chiều).
       const nh=Math.min(strH*0.62, strH-16);   // chiều sâu hốc
@@ -681,14 +729,14 @@ function buildStringer(){
   });
   // GIẰNG NGANG (NAN LIÊN KẾT) trên đầu chân (đỡ nan trên khi nan chạy dọc)
   if(bearer)positions(linkN,linkW,L).forEach(x=>boxes.push({x,y:0,z:strTop,dx:linkW,dy:W,dz:linkT,kind:'board'}));
-  boxes.push(...deck(topRot,topN,topW,topT,zDeck,L,W,num('topGroup'),num('topGap')));
+  boxes.push(...deck(topRot,topN,topW,topT,zDeck,L,W,num('topGroup'),num('topGap'),num('topGapOut'),topGapMode()));
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
   if(bearer)cau.push([linkN+' Nan liên kết',W+'x'+linkW+'x'+linkT+'mm']);
   cau.push([strN+(hasBot?' Nan liên kết':(notch?' Chân khoét':' Chân suốt')),L+'x'+strW+'x'+strH+'mm']);
   if(hasBot)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   const adims=[
-    ...deckDims(topRot,topN,topW,L,W,Htot,num('topGroup'),num('topGap')),
+    ...deckDims(topRot,topN,topW,L,W,Htot,num('topGroup'),num('topGap'),num('topGapOut'),topGapMode()),
     {a:[L,0,zStr],b:[L,0,strTop],off:{x:34,y:0},label:strH+'',wit:1},
     {a:[L,0,zDeck],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
   ];
@@ -736,24 +784,40 @@ function drawBox(ctx,b,s,ox,oy){
   face([[xf,y,z],[xf,y+dy,z],[xf,y+dy,zt],[xf,y,zt]],'#C0C5C8');   // mặt X (trung gian)
   face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#ECEDF0'); // mặt trên (sáng)
 }
-/* CHÂN CỤC CÓ VÁT ĐÁY - mỗi cạnh đáy cắt vát ch mm (45 độ) */
-function drawBlockChamfered(ctx,b,s,ox,oy){
-  const {x,y,z,dx,dy,dz,chamfer:ch}=b, zt=z+dz;
+/* VÁT CẠNH GÓC - đa giác đáy (mặt bằng) với các góc đã cắt 45 độ theo b.cut */
+function cutPoly(b){
+  const c=Math.max(0,Math.min(b.ch||0, Math.min(b.dx,b.dy)/2-0.5));
+  const x0=b.x,x1=b.x+b.dx,y0=b.y,y1=b.y+b.dy,cut=b.cut||{},pts=[];
+  if(cut.sw){pts.push([x0+c,y0]);pts.push([x0,y0+c]);} else pts.push([x0,y0]);            // góc Tây-Nam
+  if(cut.nw){pts.push([x0,y1-c]);pts.push([x0+c,y1]);} else pts.push([x0,y1]);            // Tây-Bắc
+  if(cut.ne){pts.push([x1-c,y1]);pts.push([x1,y1-c]);} else pts.push([x1,y1]);            // Đông-Bắc
+  if(cut.se){pts.push([x1,y0+c]);pts.push([x1-c,y0]);} else pts.push([x1,y0]);            // Đông-Nam
+  return pts;
+}
+/* Khối lăng trụ đứng có cạnh góc vát - vẽ mặt bên (xa->gần) rồi mặt trên */
+function drawCornerCutBox(ctx,b,s,ox,oy){
+  const base=cutPoly(b), z0=b.z, z1=b.z+b.dz;
   const P=(X,Y,Z)=>proj(X,Y,Z,s,ox,oy);
-  function face(pts3,fill){
-    const pts=pts3.map(p=>P(p[0],p[1],p[2]));
-    ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));
-    ctx.closePath();ctx.fillStyle=fill;ctx.fill();
-    ctx.strokeStyle='#545C62';ctx.lineWidth=0.55;ctx.lineJoin='round';ctx.stroke();
+  const n=base.length, faces=[];
+  for(let i=0;i<n;i++){
+    const a=base[i], d=base[(i+1)%n];
+    const mx=(a[0]+d[0])/2, my=(a[1]+d[1])/2;
+    const depth=mx*Math.sin(VIEW.yaw)+my*Math.cos(VIEW.yaw);
+    const ex=d[0]-a[0], ey=d[1]-a[1];
+    const diag=Math.abs(ex)>1 && Math.abs(ey)>1;            // cạnh vát chéo
+    const horiz=Math.abs(ex)>=Math.abs(ey);                 // cạnh chạy theo X -> pháp tuyến theo Y (mặt tối)
+    const fill=diag?'#B4BABE':(horiz?'#A4ABB0':'#C0C5C8');
+    faces.push({a,d,depth,fill});
   }
-  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);
-  const yf=(c>=0)?y+dy:y, xf=(sn>=0)?x+dx:x;
-  // Mặt Y (tối) - vát 2 cạnh đáy (góc trái dưới + phải dưới)
-  face([[x,yf,z+ch],[x+ch,yf,z],[x+dx-ch,yf,z],[x+dx,yf,z+ch],[x+dx,yf,zt],[x,yf,zt]],'#A4ABB0');
-  // Mặt X (trung gian) - vát 2 cạnh đáy
-  face([[xf,y,z+ch],[xf,y+ch,z],[xf,y+dy-ch,z],[xf,y+dy,z+ch],[xf,y+dy,zt],[xf,y,zt]],'#C0C5C8');
-  // Mặt trên (sáng) - không đổi
-  face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#ECEDF0');
+  faces.sort((p,q)=>p.depth-q.depth);   // xa trước, gần sau (lăng trụ lồi -> phủ đúng)
+  faces.forEach(f=>{
+    const q=[P(f.a[0],f.a[1],z0),P(f.d[0],f.d[1],z0),P(f.d[0],f.d[1],z1),P(f.a[0],f.a[1],z1)];
+    ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y));ctx.closePath();
+    ctx.fillStyle=f.fill;ctx.fill();ctx.strokeStyle='#545C62';ctx.lineWidth=0.55;ctx.lineJoin='round';ctx.stroke();
+  });
+  const tp=base.map(p=>P(p[0],p[1],z1));   // mặt trên (sáng)
+  ctx.beginPath();tp.forEach((p,i)=>i?ctx.lineTo(p.X,p.Y):ctx.moveTo(p.X,p.Y));ctx.closePath();
+  ctx.fillStyle='#ECEDF0';ctx.fill();ctx.strokeStyle='#545C62';ctx.lineWidth=0.55;ctx.lineJoin='round';ctx.stroke();
 }
 /* CHÂN SUỐT KHOÉT HỐC VÒM - vẽ profile (x-z) đùn theo bề rộng strW */
 function archProf(t){return Math.min(1,Math.sin(Math.PI*t)*1.55);} // bump cạnh dốc, đỉnh phẳng
@@ -822,7 +886,7 @@ function drawPalletInto(ctx,area,m){
   // Vẽ theo LỚP từ dưới lên (z trước), trong cùng lớp thì xa -> gần (x+y) -> xếp chồng đúng, không có thanh "bay".
   [...m.boxes].sort((a,b)=>(a.z-b.z)||(boxDepth(a)-boxDepth(b))).forEach(b=>{
     if(b.kind==='notch') drawNotchStr(ctx,b,s,ox,oy);
-    else if(b.kind==='block' && b.chamfer>0) drawBlockChamfered(ctx,b,s,ox,oy);
+    else if(b.ch>0 && b.cut) drawCornerCutBox(ctx,b,s,ox,oy);
     else drawBox(ctx,b,s,ox,oy);
   });
   // ===== COTE TỔNG L / W / H — bám ĐÚNG cạnh ở MỌI góc xoay =====
@@ -941,7 +1005,11 @@ function draw2DTop(ctx,area,m){
   ctx.fillStyle='#FAFBFC';ctx.fillRect(X(0),Y(0),dw,dh);
   const top=m.boxes.filter(b=>Math.abs((b.z+b.dz)-m.Htot)<0.6).sort((a,b)=>a.x-b.x);
   ctx.lineWidth=1;
-  top.forEach(b=>{ctx.fillStyle='#E4E7E9';ctx.strokeStyle='#2A2F33';ctx.fillRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);});
+  top.forEach(b=>{ctx.fillStyle='#E4E7E9';ctx.strokeStyle='#2A2F33';
+    if(b.ch>0 && b.cut){ const pl=cutPoly(b);
+      ctx.beginPath();pl.forEach((p,i)=>{const xx=X(p[0]),yy=Y(p[1]);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.closePath();ctx.fill();ctx.stroke();
+    } else { ctx.fillRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s); }
+  });
   // lưới chân cục (nét đứt cam) - cho thợ thấy VỊ TRÍ đóng 9 chân dưới sàn
   const blocks=m.boxes.filter(b=>b.kind==='block');
   if($('engine').value==='block' && blocks.length){
@@ -949,7 +1017,11 @@ function draw2DTop(ctx,area,m){
     blocks.forEach(b=>ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s));
     ctx.restore();
   }
-  ctx.strokeStyle='#9aa0a5';ctx.strokeRect(X(0),Y(0),dw,dh);
+  const gch=num('blkChamfer')||0;
+  ctx.strokeStyle='#9aa0a5';
+  if(gch>0){ const c=Math.min(gch,Math.min(L,W)/2-0.5),pl=cutPoly({x:0,y:0,dx:L,dy:W,ch:c,cut:{sw:1,se:1,ne:1,nw:1}});
+    ctx.beginPath();pl.forEach((p,i)=>{const xx=X(p[0]),yy=Y(p[1]);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.closePath();ctx.stroke();
+  } else ctx.strokeRect(X(0),Y(0),dw,dh);
   hDim(ctx,X(0),X(L),Y(W)+26,L+' mm');
   vDim(ctx,Y(0),Y(W),X(L)+28,W+' mm');
   // Cote chi tiết (rộng nan/khe, khoảng cách chân) đã chuyển LÊN HÌNH 3D (đỡ chật) -
@@ -971,13 +1043,8 @@ function draw2DSide(ctx,area,m){
       return;
     }
     ctx.fillStyle=b.kind==='block'?'#CFD3D6':'#E4E7E9';
-    if(b.kind==='block' && b.chamfer>0){ // chân cục vát góc đáy (EPAL) - vẽ profile có vát 2 góc dưới
-      const ch=b.chamfer, x0=b.x, x1=b.x+b.dx, z0=b.z, z1=b.z+b.dz;
-      const pts=[[x0,z1],[x1,z1],[x1,z0+ch],[x1-ch,z0],[x0+ch,z0],[x0,z0+ch]];
-      ctx.beginPath();pts.forEach((p,i)=>{const xx=X(p[0]),yy=Y(p[1]);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.closePath();ctx.fill();ctx.stroke();
-    } else {
-      ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
-    }
+    // Vát cạnh góc nằm ở mặt bằng (cắt theo x-y) -> hình chiếu cạnh (x-z) không đổi silhouette.
+    ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
   });
   vDim(ctx,Y(0),Y(H),X(0)-24,Math.round(H)+' mm');
   hDim(ctx,X(0),X(L),Y(0)+30,L+' mm');
@@ -1011,6 +1078,7 @@ function viewLabel(ctx,x,y,t){ctx.fillStyle='#6B7680';ctx.font='600 13px Arial';
 
 let RENDER_DPR=2;   // 2x cho màn hình; tải ảnh tạm nâng lên 4x cho nét khi zoom/cắt
 function render(){
+  updateGapUI();
   const m=buildModel(),cv=$('sheet'),DPR=RENDER_DPR;
   if($('Hdisp')&&document.activeElement!==$('Hdisp'))$('Hdisp').value=Math.round(m.Htot);   // đồng bộ H (không ghi đè khi đang gõ)
   const Wd=1500,Hd=1061;   // tỉ lệ A4 NGANG (297:210 = 1.414:1) -> in/xuất PNG vừa khít 1 trang A4 ngang
@@ -1190,7 +1258,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
   render();}
 /* ===== LƯU / TẢI MẪU ===== */
 const API='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-designs';
-const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap',
+const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap','topGapOut','topGapAuto',
   'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
   'botN','botW','botT','botRot','strN','strW','strH','notch','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat'];
 function getFormState(){
