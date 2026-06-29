@@ -916,13 +916,13 @@ function render(){
   ctx.fillStyle='#FAFBFC';roundRect(ctx,32,bb,372,bh,10);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
   draw2DTop(ctx,{x:40,y:bb+12,w:356,h:bh-24},m);
   // Cột 2 - Hình chiếu cạnh
-  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.fillText('HÌNH CHIẾU CẠNH - CẮT LỚP',416,by);
+  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.textAlign='left';ctx.fillText('HÌNH CHIẾU CẠNH - CẮT LỚP',416,by);
   ctx.fillStyle='#FB7703';ctx.fillRect(416,by+8,200,3);
   ctx.fillStyle='#FAFBFC';roundRect(ctx,408,bb,520,bh,10);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
   draw2DSide(ctx,{x:416,y:bb+12,w:504,h:bh-24},m);
   // Cột 3 - Thông số sản phẩm
   const SX=948, SW=292;
-  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',SX,by);
+  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.textAlign='left';ctx.fillText('THÔNG SỐ SẢN PHẨM',SX,by);
   ctx.fillStyle='#FB7703';ctx.fillRect(SX,by+8,150,3);
   const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
   if(!m.collar){
