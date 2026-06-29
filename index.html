@@ -127,6 +127,9 @@
         <div><label>Rộng W (mm)</label><input id="W" type="number" value="1016"></div>
         <div><label>Cao H (mm)</label><input id="Hdisp" type="number" value=""></div>
       </div>
+      <div style="margin-top:4px">
+        <button type="button" onclick="swapLW()" style="font-size:12px;padding:4px 12px;background:#EFF1F3;border:1px solid #C8CDD2;border-radius:5px;cursor:pointer;color:#444">⇄ Xoay 90° (đổi L↔W)</button>
+      </div>
     </div>
 
     <!-- TOP DECK (block + stringer) -->
@@ -386,6 +389,11 @@ const SIZES=[
  {id:'1200x900',label:'1200 x 900 (phổ biến VN)',L:1200,W:900},
  {id:'600x800',label:'600 x 800 (nửa kích thước / retail)',L:600,W:800,topN:5},
 ];
+function swapLW(){
+  const lEl=$('L'),wEl=$('W');
+  const tmp=lEl.value; lEl.value=wEl.value; wEl.value=tmp;
+  render();
+}
 function onMarketChange(){
   const v=$('market').value;
   const exportMarkets=['US','EU','JP','KR','AU','OTHER'];
@@ -619,11 +627,12 @@ function buildCollar(){
 }
 
 /* ---------- ISO RENDER ---------- */
+const Z_SCALE=0.5; // nén trục đứng: 1.0=tỉ lệ thật, 0.5=mỏng hơn
 function proj(x,y,z,s,ox,oy){
   // CAMERA TRỰC GIAO THẬT: xoay quanh trục đứng (yaw) rồi nghiêng theo góc elev. Cứng -> không méo; cạnh đứng luôn dọc.
   const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw),se=Math.sin(VIEW.elev),ce=Math.cos(VIEW.elev);
   const x1=x*c - y*sn, y1=x*sn + y*c;
-  return {X:ox+x1*s, Y:oy+(y1*se - z*ce)*s};
+  return {X:ox+x1*s, Y:oy+(y1*se - z*Z_SCALE*ce)*s};
 }
 // độ sâu vào màn của TÂM box (mặt phẳng đáy đã xoay) -> vẽ xa trước, gần sau
 function boxDepth(b){const cx=b.x+b.dx/2,cy=b.y+b.dy/2;return cx*Math.sin(VIEW.yaw)+cy*Math.cos(VIEW.yaw);}

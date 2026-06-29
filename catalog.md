@@ -30,6 +30,24 @@ Quét 2026-06-27 từ `/product-category/pallet-go/` (3 trang). Mọi kiểu dá
 
 Kích thước phần lớn "theo yêu cầu" → tool để người dùng nhập.
 
+## Size presets có sẵn (cập nhật 2026-06-29)
+
+| ID preset | Label | Phổ biến ở |
+|---|---|---|
+| `1100x1100` | 1100 x 1100 (nội địa VN phổ biến nhất) | Việt Nam |
+| `1200x1000` | 1200 x 1000 (GMA/Bắc Mỹ cải tiến) | Toàn cầu |
+| `1219x1016` | 1219 x 1016 (GMA / Bắc Mỹ chuẩn) | Mỹ, Canada |
+| `1200x800` | 1200 x 800 (EPAL EU chuẩn) | Châu Âu |
+| `1000x1200` | 1000 x 1200 (EPAL 3 / CP1) | Châu Âu |
+| `800x600` | 800 x 600 (EPAL 6 / nửa EU) | Châu Âu |
+| `1140x1140` | 1140 x 1140 (EPAL CP2/CP3) | Hoá chất EU |
+| `1100x1300` | 1100 x 1300 (EPAL CP4) | Hoá chất EU |
+| `1000x1200-loscam` | 1000 x 1200 (Loscam châu Á) | Úc, ASEAN |
+| `1200x1000-loscam` | 1200 x 1000 (Loscam kiểu TQ) | Trung Quốc |
+| `1000x1000` | 1000 x 1000 (vuông Nhật) | Nhật Bản |
+| `1200x900` | 1200 x 900 (phổ biến VN) | Việt Nam |
+| `600x800` | 600 x 800 (nửa kích thước / retail) | Bán lẻ, FMCG |
+
 ## Cách bố trí dropdown trong tool (2026-06-27)
 Tool KHÔNG liệt kê từng sản phẩm (keo/thông/tràm... = cùng cấu trúc). Thay vào đó 2 dropdown:
 - **Kiểu dáng** (cấu trúc): 5 lựa chọn = 2 mặt 2 chiều (chân suốt kín 2 bên + giữa, có sàn đáy) / 1 mặt 4 chiều khóa chân (chân cục) / 1 mặt 2 chiều chân suốt / 1 mặt 4 chiều khoét chân / khung gỗ.
