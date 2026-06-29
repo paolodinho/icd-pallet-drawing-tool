@@ -488,9 +488,13 @@ function drawBox(ctx,b,s,ox,oy){
   const {x,y,z,dx,dy,dz}=b,zt=z+dz;
   const P=(X,Y,Z)=>proj(X,Y,Z,s,ox,oy);
   function face(pts3,fill){const pts=pts3.map(p=>P(p[0],p[1],p[2]));ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle='#2A2F33';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke();return pts;}
-  face([[x,y+dy,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x,y+dy,zt]],'#C7CBCE');   // left  (tối)
-  face([[x+dx,y,z],[x+dx,y+dy,z],[x+dx,y+dy,zt],[x+dx,y,zt]],'#D9DCDE');   // right (vừa)
-  face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#F0F1F2');       // top   (sáng)
+  // Chọn 2 mặt bên ĐANG QUAY VỀ PHÍA NGƯỜI XEM theo góc xoay (để không bị mất mặt khi xoay quá 90°).
+  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);
+  const yf=(c>=0)?y+dy:y;   // mặt vuông góc trục Y nhìn thấy (trải theo x,z)
+  const xf=(sn>=0)?x+dx:x;  // mặt vuông góc trục X nhìn thấy (trải theo y,z)
+  face([[x,yf,z],[x+dx,yf,z],[x+dx,yf,zt],[x,yf,zt]],'#C7CBCE');   // mặt theo Y (tối)
+  face([[xf,y,z],[xf,y+dy,z],[xf,y+dy,zt],[xf,y,zt]],'#D9DCDE');   // mặt theo X (vừa)
+  face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#F0F1F2');       // mặt trên (sáng)
 }
 /* CHÂN SUỐT KHOÉT HỐC VÒM - vẽ profile (x-z) đùn theo bề rộng strW */
 function archProf(t){return Math.min(1,Math.sin(Math.PI*t)*1.55);} // bump cạnh dốc, đỉnh phẳng
