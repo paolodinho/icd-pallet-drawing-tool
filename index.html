@@ -198,8 +198,11 @@
         <div><label>Rộng b <span id="blkB-hint" style="color:#aaa;font-size:10px">(= nan lk)</span></label><input id="blkB" type="number" value="80"></div>
         <div><label>Cao h</label><input id="blkH" type="number" value="80"></div>
       </div>
-      <div class="row" style="margin-top:6px">
-        <div><label>Vát đáy chân (mm) <span style="color:#aaa;font-size:10px">0 = không vát</span></label><input id="blkChamfer" type="number" value="0" min="0" oninput="render()"></div>
+    </div>
+    <div class="grp" data-eng="block stringer">
+      <div class="gt">Vát đáy chân</div>
+      <div class="row">
+        <div><label>Vát đáy chân (mm) <span style="color:#aaa;font-size:10px">0 = không vát - áp cho mọi kiểu chân</span></label><input id="blkChamfer" type="number" value="0" min="0" oninput="render()"></div>
       </div>
     </div>
     <div class="grp" id="g-bot" data-eng="block stringer">
@@ -282,10 +285,10 @@
     <div class="saved-section">
       <div class="gt">Mẫu đã lưu</div>
       <div class="save-row">
-        <input id="saveName" placeholder="Tên mẫu (vd: Pallet 1200x1000 EPAL)">
+        <input id="saveName" placeholder="Để trống = tự đặt tên theo thông số">
         <button onclick="saveDesign()">Lưu mẫu</button>
       </div>
-      <input id="saveSearch" class="saved-search" placeholder="Tìm mẫu theo tên..." oninput="renderSavedList()">
+      <input id="saveSearch" class="saved-search" placeholder="Tìm theo tên hoặc loại pallet..." oninput="renderSavedList()">
       <div id="savedList" class="saved-list"></div>
     </div>
 
@@ -662,11 +665,12 @@ function buildStringer(){
   const bearer=topRot;
   const linkN=num('linkN')||3, linkW=num('linkW')||topW, linkT=num('linkT')||topT;
   const zStr=hasBot?botT:0, strTop=zStr+strH, zDeck=strTop+(bearer?linkT:0), Htot=zDeck+topT;
+  const strChamfer=Math.max(0, Math.min(num('blkChamfer')||0, strH-4)); // vát đáy chân suốt (áp mọi kiểu, mặc định 0)
   const boxes=[];
   if(hasBot)boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); // sàn đáy
   const ys=positions(strN,strW,W);
   ys.forEach(y=>{
-    if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
+    if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block',chamfer:strChamfer}); }
     else{
       // CHÂN SUỐT KHOÉT: 1 chân liền chạy suốt, KHOÉT 2 HỐC ở ĐÁY cho càng xe nâng luồn qua (4 chiều).
       const nh=Math.min(strH*0.62, strH-16);   // chiều sâu hốc
@@ -1188,7 +1192,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
 const API='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap',
   'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
-  'botN','botW','botT','botRot','strN','strW','strH','notch','colT','colH','dynLoad','staLoad','moist','treat','color'];
+  'botN','botW','botT','botRot','strN','strW','strH','notch','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat'];
 function getFormState(){
   const s={};
   FORM_IDS.forEach(id=>{const el=$(id);if(!el)return;s[id]=el.type==='checkbox'?el.checked:el.value;});
@@ -1198,23 +1202,63 @@ function getFormState(){
 function setFormState(s){
   FORM_IDS.forEach(id=>{const el=$(id);if(!el||s[id]===undefined)return;if(el.type==='checkbox'){el.checked=s[id];}else{el.value=s[id];}});
   updateBotGroup();
+  if(typeof onMarketChange==='function')try{onMarketChange();}catch(e){}
   if(s._view!==undefined)setView(s._view);else render();
 }
 let _savedCache=null;
 async function loadSavedCache(){
   try{const r=await fetch(API);_savedCache=await r.json();}catch(e){_savedCache=[];}
 }
+// ---- Tự phân loại + tự đặt tên mẫu theo thông số ----
+const MK_SHORT={US:'GMA',EU:'EPAL',JP:'JP',KR:'KR',AU:'AU',OTHER:'XK'};
+const MK_FULL={US:'Mỹ (GMA)',EU:'Châu Âu (EPAL)',JP:'Nhật',KR:'Hàn Quốc',AU:'Úc/NZ',OTHER:'Xuất khẩu'};
+function escHtml(t){return String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function catOf(s){                         // nhóm phân loại từ thông số kết cấu
+  if(!s) return 'Khác';
+  if(s.engine==='collar') return 'Khung gỗ (collar)';
+  const faces=(s.faces==2||s.faces==='2')?'2 mặt':'1 mặt';
+  let lift='';
+  if(s.engine==='block') lift='4 chiều';
+  else if(s.engine==='stringer') lift=(s.notch===true||s.notch==='true')?'4 chiều (khoét chân)':'2 chiều';
+  return 'Pallet '+faces+(lift?' · '+lift:'');
+}
+function autoName(s){                       // tên tự sinh: loại + kích thước + tiêu chuẩn + chất liệu
+  const L=Math.round(parseFloat(s.L)||0), W=Math.round(parseFloat(s.W)||0);
+  let n=catOf(s);
+  if(L&&W) n+=' '+L+'×'+W;
+  const mk=s.market&&s.market!=='VN'?MK_SHORT[s.market]:'';
+  if(mk) n+=' '+mk;
+  const mat=(s.material||'').trim();
+  if(mat) n+=' · '+mat;
+  return n;
+}
+function uniqueName(base){
+  const names=new Set((_savedCache||[]).map(d=>d.name));
+  if(!names.has(base)) return base;
+  let i=2; while(names.has(base+' ('+i+')')) i++;
+  return base+' ('+i+')';
+}
+function subtitle(s){                       // dòng phụ dưới tên: thông số gọn
+  if(!s) return '';
+  const L=Math.round(parseFloat(s.L)||0),W=Math.round(parseFloat(s.W)||0);
+  const p=[];
+  if(L&&W) p.push(L+'×'+W+'mm');
+  if((s.material||'').trim()) p.push(s.material.trim());
+  if(s.market&&s.market!=='VN'&&MK_FULL[s.market]) p.push(MK_FULL[s.market]);
+  return p.join(' · ');
+}
 async function saveDesign(){
-  const name=($('saveName').value||'').trim();
-  if(!name){$('saveName').focus();$('saveName').style.borderColor='#FB7703';return;}
-  $('saveName').style.borderColor='';
-  if(_savedCache&&_savedCache.find(d=>d.name===name)){
+  const state=getFormState();
+  let name=($('saveName').value||'').trim();
+  if(!name){ name=uniqueName(autoName(state)); }          // để trống -> tự đặt tên
+  else if(_savedCache&&_savedCache.find(d=>d.name===name)){
     if(!confirm('Mau "'+name+'" da ton tai. Ghi de?'))return;
   }
-  const btn=$('savedList').previousElementSibling.querySelector('button');
+  $('saveName').style.borderColor='';
+  const btn=document.querySelector('.save-row button');
   if(btn){btn.textContent='Dang luu...';btn.disabled=true;}
   try{
-    await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,state:getFormState()})});
+    await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,state})});
     $('saveName').value='';
     await loadSavedCache();
     renderSavedList();
@@ -1235,9 +1279,23 @@ async function deleteDesign(idx){
   }catch(e){alert('Loi xoa: '+e.message);}
 }
 function renderSavedList(){
-  const arr=_savedCache||[];const el=$('savedList');if(!el)return;
-  if(!arr.length){el.innerHTML='<div class="saved-empty">Chua co mau nao. Nhap ten roi bam Luu mau.</div>';return;}
-  el.innerHTML=arr.map((d,i)=>'<div class="saved-item"><span class="saved-name" title="Tai mau: '+d.name+'" onclick="loadDesign('+i+')">'+d.name+'</span><button class="saved-load" onclick="loadDesign('+i+')">Tai</button><button class="saved-del" onclick="deleteDesign('+i+')" title="Xoa">&#x2715;</button></div>').join('');
+  const all=_savedCache||[];const el=$('savedList');if(!el)return;
+  if(!all.length){el.innerHTML='<div class="saved-empty">Chua co mau nao. Bam "Luu mau" de luu thiet ke hien tai.</div>';return;}
+  const q=(($('saveSearch')||{}).value||'').trim().toLowerCase();
+  const items=all.map((d,i)=>({d,i})).filter(x=>!q ||
+    (x.d.name||'').toLowerCase().includes(q) || catOf(x.d.state).toLowerCase().includes(q));
+  if(!items.length){el.innerHTML='<div class="saved-empty">Khong tim thay mau khop tu khoa.</div>';return;}
+  const groups={};
+  items.forEach(x=>{const c=catOf(x.d.state);(groups[c]=groups[c]||[]).push(x);});
+  let html='';
+  Object.keys(groups).sort().forEach(c=>{
+    const list=groups[c].sort((a,b)=>(parseFloat((a.d.state||{}).L)||0)-(parseFloat((b.d.state||{}).L)||0));
+    html+='<div class="saved-group">'+escHtml(c)+' <span>('+list.length+')</span></div>';
+    list.forEach(x=>{const d=x.d,i=x.i,sub=subtitle(d.state);
+      html+='<div class="saved-item"><span class="saved-name" title="Tai mau" onclick="loadDesign('+i+')">'+escHtml(d.name)+(sub?'<small>'+escHtml(sub)+'</small>':'')+'</span><button class="saved-load" onclick="loadDesign('+i+')">Tai</button><button class="saved-del" onclick="deleteDesign('+i+')" title="Xoa">&#x2715;</button></div>';
+    });
+  });
+  el.innerHTML=html;
 }
 
 // ====== XOAY TỰ DO 3D: kéo chuột / chạm trên vùng phối cảnh ======
