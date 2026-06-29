@@ -198,7 +198,7 @@
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="toggleFull()">Xem toàn màn hình</button>
       </div>
     </div>
-    <div class="hint" style="margin:0 0 8px">Mẹo: giữ chuột kéo trên hình 3D để xoay xem pallet theo mọi chiều (kéo ngang = xoay quanh, kéo dọc = nâng/hạ góc nhìn).</div>
+    <div class="hint" style="margin:0 0 8px">Mẹo: kéo chuột trên hình 3D để xoay - <b>kéo ngang</b> = xoay quanh trục đứng, <b>kéo dọc</b> = nghiêng lên/xuống (mỗi lần kéo chỉ theo 1 trục). Góc đang xem chính là góc sẽ tải xuống khi bấm "Tải ảnh PNG".</div>
     <div id="canvasWrap"><canvas id="sheet" width="1400" height="980"></canvas></div>
   </div>
 </div>
@@ -785,8 +785,16 @@ function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,elev:VIEW_DEFAULT.elev};render()
   function pt(e){return e.touches&&e.touches[0]?e.touches[0]:e;}
   function logical(e){const r=cv.getBoundingClientRect(),p=pt(e);return {x:(p.clientX-r.left)*1500/r.width, y:(p.clientY-r.top)*1280/r.height};}
   function in3D(p){return p.x>=32&&p.x<=1036&&p.y>=150&&p.y<=752;}   // vùng ô phối cảnh 3D
-  function down(e){const p=pt(e);if(!in3D(logical(e)))return;drag={x:p.clientX,y:p.clientY,yaw:VIEW.yaw,elev:VIEW.elev};cv.style.cursor='grabbing';if(e.cancelable)e.preventDefault();}
-  function move(e){if(!drag){if(e.type==='mousemove')cv.style.cursor=in3D(logical(e))?'grab':'default';return;}const p=pt(e);VIEW.yaw=drag.yaw+(p.clientX-drag.x)*0.01;VIEW.elev=Math.max(ELEV_MIN,Math.min(ELEV_MAX,drag.elev+(p.clientY-drag.y)*0.004));reqRender();if(e.cancelable)e.preventDefault();}
+  function down(e){const p=pt(e);if(!in3D(logical(e)))return;drag={x:p.clientX,y:p.clientY,yaw:VIEW.yaw,elev:VIEW.elev,axis:null};cv.style.cursor='grabbing';if(e.cancelable)e.preventDefault();}
+  function move(e){
+    if(!drag){if(e.type==='mousemove')cv.style.cursor=in3D(logical(e))?'grab':'default';return;}
+    const p=pt(e),dx=p.clientX-drag.x,dy=p.clientY-drag.y;
+    // KHOÁ 1 TRỤC mỗi lần kéo: ngang -> xoay quanh trục đứng; dọc -> nghiêng. Không trộn để tránh cảm giác méo.
+    if(!drag.axis && (Math.abs(dx)>5 || Math.abs(dy)>5)) drag.axis = Math.abs(dx)>=Math.abs(dy) ? 'yaw' : 'elev';
+    if(drag.axis==='yaw') VIEW.yaw = drag.yaw + dx*0.01;
+    else if(drag.axis==='elev') VIEW.elev = Math.max(ELEV_MIN,Math.min(ELEV_MAX, drag.elev + dy*0.004));
+    reqRender();if(e.cancelable)e.preventDefault();
+  }
   function up(){if(drag){drag=null;cv.style.cursor='grab';}}
   cv.addEventListener('mousedown',down);window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
   cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
