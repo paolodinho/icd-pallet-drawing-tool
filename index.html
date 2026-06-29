@@ -85,7 +85,7 @@
   .saved-del:hover{color:#C62828;background:#FFF5F5}
   .saved-empty{font-size:12px;color:#9AA3AB;padding:4px 0}
   /* In ra A4 dọc: chỉ in bản vẽ (canvas), vừa khít 1 trang */
-  @page{size:A4 portrait;margin:8mm}
+  @page{size:A4 landscape;margin:8mm}
   @media print{
     body.printing *{visibility:hidden!important}
     body.printing #canvasWrap,body.printing #canvasWrap *{visibility:visible!important}
@@ -885,7 +885,7 @@ let RENDER_DPR=2;   // 2x cho màn hình; tải ảnh tạm nâng lên 4x cho n�
 function render(){
   const m=buildModel(),cv=$('sheet'),DPR=RENDER_DPR;
   if($('Hdisp')&&document.activeElement!==$('Hdisp'))$('Hdisp').value=Math.round(m.Htot);   // đồng bộ H (không ghi đè khi đang gõ)
-  const Wd=1500,Hd=2121;   // tỉ lệ A4 dọc (210:297 = 1:1.414) -> in/xuất PNG vừa khít 1 trang A4
+  const Wd=1500,Hd=1061;   // tỉ lệ A4 NGANG (297:210 = 1.414:1) -> in/xuất PNG vừa khít 1 trang A4 ngang
   cv.width=Wd*DPR;cv.height=Hd*DPR;cv.style.aspectRatio=Wd+'/'+Hd;
   const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
   ctx.clearRect(0,0,Wd,Hd);ctx.fillStyle='#fff';ctx.fillRect(0,0,Wd,Hd);
@@ -898,27 +898,28 @@ function render(){
   ctx.font='500 15px Arial';ctx.fillStyle='#FB7703';
   const tag=m.collar?'Khung gỗ (collar)':('Chất liệu: '+$('material').value+'   •   '+(m.faces===2?'Pallet 2 mặt':'Pallet 1 mặt'));
   ctx.fillText(tag,Wd-40,72);
-  // ====== HÌNH 3D HERO — TO, TOÀN CHIỀU NGANG (trên cùng) ======
-  ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT - PHỐI CẢNH 3D',40,126);
-  ctx.fillStyle='#FB7703';ctx.fillRect(40,136,300,3);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,150,1436,900,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  viewLabel(ctx,44,172,'Phối cảnh 3D');
-  drawPalletInto(ctx,{x:40,y:162,w:1420,h:876},m);
-  // ====== HÌNH CHIẾU KỸ THUẬT 2D (hàng giữa) ======
-  const y2=1086;
-  ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('HÌNH CHIẾU KỸ THUẬT (CÓ CỐT)',40,y2);
-  ctx.fillStyle='#FB7703';ctx.fillRect(40,y2+10,270,3);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,y2+24,470,480,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  viewLabel(ctx,44,y2+46,'Hình chiếu bằng (nhìn từ trên)');
-  draw2DTop(ctx,{x:40,y:y2+56,w:454,h:440},m);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,522,y2+24,946,480,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  viewLabel(ctx,534,y2+46,'Hình chiếu cạnh - cắt lớp (theo chiều dài)');
-  draw2DSide(ctx,{x:532,y:y2+56,w:926,h:440},m);
-  // ====== THÔNG SỐ SẢN PHẨM + CẤU TẠO (hàng dưới cùng) ======
-  const y3=1632, SX=32, SW=700, CX=760;
-  ctx.textAlign='left';ctx.textBaseline='alphabetic';
-  ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',SX,y3);
-  ctx.fillStyle='#FB7703';ctx.fillRect(SX,y3+10,190,3);
+  // ====== HÌNH 3D HERO — TO, TOÀN CHIỀU NGANG (trên) ======
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT - PHỐI CẢNH 3D',40,124);
+  ctx.fillStyle='#FB7703';ctx.fillRect(40,134,300,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,144,1436,558,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  viewLabel(ctx,44,166,'Phối cảnh 3D');
+  drawPalletInto(ctx,{x:40,y:156,w:1420,h:540},m);
+  // ====== HÀNG DƯỚI: HÌNH CHIẾU BẰNG | CẠNH | THÔNG SỐ | CẤU TẠO (4 cột) ======
+  const by=720, bb=738, bh=258;
+  // Cột 1 - Hình chiếu bằng
+  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.textAlign='left';ctx.fillText('HÌNH CHIẾU BẰNG',40,by);
+  ctx.fillStyle='#FB7703';ctx.fillRect(40,by+8,120,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,bb,372,bh,10);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  draw2DTop(ctx,{x:40,y:bb+12,w:356,h:bh-24},m);
+  // Cột 2 - Hình chiếu cạnh
+  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.fillText('HÌNH CHIẾU CẠNH - CẮT LỚP',416,by);
+  ctx.fillStyle='#FB7703';ctx.fillRect(416,by+8,200,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,408,bb,520,bh,10);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  draw2DSide(ctx,{x:416,y:bb+12,w:504,h:bh-24},m);
+  // Cột 3 - Thông số sản phẩm
+  const SX=948, SW=292;
+  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',SX,by);
+  ctx.fillStyle='#FB7703';ctx.fillRect(SX,by+8,150,3);
   const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
   if(!m.collar){
     specs.push(['Tải trọng động','~ '+$('dynLoad').value+' kg']);
@@ -936,13 +937,14 @@ function render(){
       specs.push(['ISPM 15',ispmMap[$('ispmTreat').value]||$('ispmTreat').value]);
     }
   }
-  let ty=y3+30;
-  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(SX,ty,SW,38);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],SX+14,ty+24);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],SX+300,ty+24);ty+=38;});
-  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(SX,y3+30,SW,specs.length*38);
-  // Cấu tạo (cột phải)
-  ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.textAlign='left';ctx.fillText('CẤU TẠO',CX,y3);ctx.fillStyle='#FB7703';ctx.fillRect(CX,y3+10,90,3);
-  let cy=y3+44;
-  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(CX,cy-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',CX+18,cy+5);ctx.font='500 13px Arial';ctx.fillStyle='#6B7680';ctx.fillText(r[1],CX+18,cy+24);cy+=46;});
+  let ty=bb;
+  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(SX,ty,SW,24);ctx.fillStyle='#6B7680';ctx.font='500 12px Arial';ctx.textAlign='left';ctx.fillText(r[0],SX+8,ty+16);ctx.fillStyle='#27343A';ctx.font='700 12px Arial';ctx.fillText(r[1],SX+118,ty+16);ty+=24;});
+  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(SX,bb,SW,specs.length*24);
+  // Cột 4 - Cấu tạo
+  const CX=1256;
+  ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.textAlign='left';ctx.fillText('CẤU TẠO',CX,by);ctx.fillStyle='#FB7703';ctx.fillRect(CX,by+8,80,3);
+  let cy=bb+10;
+  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(CX,cy-2,7,7);ctx.fillStyle='#27343A';ctx.font='700 12px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',CX+14,cy+4);ctx.font='500 11px Arial';ctx.fillStyle='#6B7680';ctx.fillText(r[1],CX+14,cy+20);cy+=40;});
   // footer
   ctx.fillStyle='#27343A';ctx.fillRect(0,Hd-56,Wd,56);
   ctx.fillStyle='#fff';ctx.font='600 14px Arial';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Công ty TNHH Sản xuất Công nghiệp ICD Việt Nam',40,Hd-28);
@@ -1121,10 +1123,10 @@ function renderSavedList(){
   const cv=$('sheet'); if(!cv)return;
   cv.style.cursor='grab'; cv.style.touchAction='none';
   let drag=null, raf=0;
-  function inHero(cx,cy){            // vùng 3D (khung to toàn ngang) trong toạ độ logic 1500x2121 (A4 dọc)
+  function inHero(cx,cy){            // vùng 3D (khung to toàn ngang) trong toạ độ logic 1500x1061 (A4 ngang)
     const r=cv.getBoundingClientRect();
-    const x=(cx-r.left)/r.width*1500, y=(cy-r.top)/r.height*2121;
-    return x>=36 && x<=1464 && y>=150 && y<=1050;
+    const x=(cx-r.left)/r.width*1500, y=(cy-r.top)/r.height*1061;
+    return x>=36 && x<=1464 && y>=144 && y<=702;
   }
   function down(e){
     const p=e.touches?e.touches[0]:e;
