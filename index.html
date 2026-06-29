@@ -436,7 +436,9 @@ function buildStringer(){
   const notch=$('notch').checked && faces!==2;  // chốt: 2 mặt 2 chiều không bao giờ khoét chân
   // sàn đáy dùng thông số nan đáy riêng (rơi về như nan trên nếu chưa nhập)
   const botW=num('botW')||topW, botT=num('botT')||topT, botN=num('botN')||topN;
-  const zStr=hasBot?botT:0, zTop=zStr+strH, Htot=zTop+topT;
+  // Khi XOAY nan trên (nan chạy DỌC L, SONG SONG chân suốt) -> phải có GIẰNG NGANG đỡ, nếu không nan treo trên không khí.
+  const bearer=topRot, bearerN=3;
+  const zStr=hasBot?botT:0, strTop=zStr+strH, zDeck=strTop+(bearer?topT:0), Htot=zDeck+topT;
   const boxes=[];
   if(hasBot)boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); // sàn đáy
   const ys=positions(strN,strW,W);
@@ -449,16 +451,20 @@ function buildStringer(){
         notches:[{cx:L*0.285,hw:L*0.105,nh},{cx:L*0.715,hw:L*0.105,nh}]});
     }
   });
-  boxes.push(...deck(topRot,topN,topW,topT,zTop,L,W));
+  // GIẰNG NGANG trên đầu chân (đỡ nan trên khi nan chạy dọc)
+  if(bearer)positions(bearerN,topW,L).forEach(x=>boxes.push({x,y:0,z:strTop,dx:topW,dy:W,dz:topT,kind:'board'}));
+  boxes.push(...deck(topRot,topN,topW,topT,zDeck,L,W));
   const cau=[];
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+(topRot?L:W)+'mm','('+topN+' nan)']);
+  if(bearer)cau.push(['Giằng ngang đỡ nan',topW+'x'+topT+'x'+W+'mm','('+bearerN+' thanh)']);
   cau.push([notch?'Chân khoét (dọc)':'Chân suốt (dọc)',strW+'x'+strH+'x'+L+'mm','('+strN+' chân'+(notch?', khoét 2 hốc':'')+')']);
   if(hasBot)cau.push(['Nan đáy (mặt dưới)',botW+'x'+botT+'x'+(botRot?L:W)+'mm','('+botN+' nan)']);
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
-    {a:[L,0,zStr],b:[L,0,zStr+strH],off:{x:34,y:0},label:strH+'',wit:1},
-    {a:[L,0,zTop],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
+    {a:[L,0,zStr],b:[L,0,strTop],off:{x:34,y:0},label:strH+'',wit:1},
+    {a:[L,0,zDeck],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
   ];
+  if(bearer)adims.push({a:[L,0,strTop],b:[L,0,zDeck],off:{x:34,y:0},label:topT+'',wit:1});
   if(hasBot)adims.push({a:[L,0,0],b:[L,0,botT],off:{x:34,y:0},label:botT+'',wit:1});
   return {L,W,Htot,boxes,cau,faces,adims};
 }
