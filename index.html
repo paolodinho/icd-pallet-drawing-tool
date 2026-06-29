@@ -362,7 +362,7 @@ function deckDims(rot,N,bw,L,W,Htot){
 const STYLES=[
  {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân suốt (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,botW:90,botT:15,botN:8,dyn:1500,sta:3000},
  {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
- {id:'block-2mat-cuc',label:'Pallet 2 mặt 4 chiều - chân cục (đố) kiểu EPAL',name:'PALLET GỖ 2 MẶT 4 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:22,topN:7,linkW:100,linkT:22,linkN:3,blkA:145,blkB:145,blkH:100,blkNL:3,blkNW:3,botW:100,botT:22,botN:3,dyn:1500,sta:4000},
+ {id:'block-2mat-cuc',label:'Pallet 2 mặt 4 chiều - chân cục (đố) kiểu EPAL',name:'PALLET GỖ 2 MẶT 4 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:22,topN:7,linkW:100,linkT:22,linkN:3,blkA:145,blkB:145,blkH:100,blkNL:3,blkNW:3,botW:100,botT:22,botN:3,dyn:1500,sta:4000,blkFixed:true},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - chân suốt',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
  {id:'collar',label:'Khung gỗ pallet (collar)',name:'KHUNG GỖ PALLET',engine:'collar',faces:1,colT:20,colH:195},
@@ -422,6 +422,7 @@ function refreshTitle(){
 function syncBlkSize(){
   if($('blkCustom') && $('blkCustom').checked) return; // đang tùy chỉnh -> không ghi đè
   if($('engine').value!=='block') return;
+  if(curStyle().blkFixed) return; // EPAL chân cục: giữ kích thước cục chuẩn, không thu theo nan
   set('blkA', num('botW'));
   set('blkB', num('linkW'));
 }
@@ -445,7 +446,8 @@ function applyStyle(){
   // Khi đổi kiểu dáng: reset về auto-sync (bỏ tick custom)
   if($('blkCustom')){ $('blkCustom').checked=false; onBlkCustom(); }
   // Chân cục KHỚP bề rộng nan (dài a = rộng nan đáy, rộng b = rộng nan liên kết)
-  if(p.engine==='block'){ syncBlkSize(); }
+  // Trừ kiểu EPAL chân cục (blkFixed): giữ nguyên kích thước cục chuẩn 145, không thu theo nan.
+  if(p.engine==='block' && !p.blkFixed){ syncBlkSize(); }
   if($('notch')){
     $('notch').checked=!!p.notch;
     const lockNotch=(p.faces===2);            // 2 mặt 2 chiều = chân suốt kín -> KHÔNG cho khoét chân
@@ -795,6 +797,7 @@ function vDim(ctx,y1,y2,x,label){
 }
 // danh sách vị trí x duy nhất của 1 nhóm box (sắp tăng)
 function uniqX(boxes){const xs=[...new Set(boxes.map(b=>Math.round(b.x)))].sort((a,b)=>a-b);return xs;}
+function uniqY(boxes){const ys=[...new Set(boxes.map(b=>Math.round(b.y)))].sort((a,b)=>a-b);return ys;}
 
 /* HÌNH CHIẾU BẰNG (nhìn từ trên) */
 function draw2DTop(ctx,area,m){
@@ -806,11 +809,25 @@ function draw2DTop(ctx,area,m){
   const top=m.boxes.filter(b=>Math.abs((b.z+b.dz)-m.Htot)<0.6).sort((a,b)=>a.x-b.x);
   ctx.lineWidth=1;
   top.forEach(b=>{ctx.fillStyle='#E4E7E9';ctx.strokeStyle='#2A2F33';ctx.fillRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s);});
+  // lưới chân cục (nét đứt cam) - cho thợ thấy VỊ TRÍ đóng 9 chân dưới sàn
+  const blocks=m.boxes.filter(b=>b.kind==='block');
+  if($('engine').value==='block' && blocks.length){
+    ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#FB7703';ctx.lineWidth=1;
+    blocks.forEach(b=>ctx.strokeRect(X(b.x),Y(b.y),b.dx*s,b.dy*s));
+    ctx.restore();
+  }
   ctx.strokeStyle='#9aa0a5';ctx.strokeRect(X(0),Y(0),dw,dh);
   hDim(ctx,X(0),X(L),Y(W)+26,L+' mm');
   vDim(ctx,Y(0),Y(W),X(L)+28,W+' mm');
   // cote rộng nan + khe hở (chỉ cho nan mặt thật: block/stringer; bỏ qua khung gỗ)
   if(top.length>1 && !m.collar && top[0].dx < m.L*0.6){const a=top[0],b=top[1],gap=b.x-(a.x+a.dx);hDim(ctx,X(a.x),X(a.x+a.dx),Y(0)-14,Math.round(a.dx)+'');if(gap>2)hDim(ctx,X(a.x+a.dx),X(b.x),Y(0)-14,Math.round(gap)+'');}
+  // cote chân cục theo CHIỀU RỘNG W (rộng cục b + khe + đua biên) - đặt bên trái, không đụng cote W bên phải
+  if($('engine').value==='block' && blocks.length){
+    const ys=uniqY(blocks), bh=blocks[0].dy, xl=X(0)-12;
+    if(ys.length>=1)vDim(ctx,Y(ys[0]),Y(ys[0]+bh),xl,Math.round(bh)+'');
+    if(ys.length>=2)vDim(ctx,Y(ys[0]+bh),Y(ys[1]),xl,Math.round(ys[1]-(ys[0]+bh))+'');
+    if(ys[0]>0)vDim(ctx,Y(0),Y(ys[0]),xl,Math.round(ys[0])+'');
+  }
 }
 /* HÌNH CHIẾU CẠNH - cắt lớp (nhìn từ mặt trước, theo chiều dài) */
 function draw2DSide(ctx,area,m){
