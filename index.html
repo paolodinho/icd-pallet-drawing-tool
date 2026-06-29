@@ -202,6 +202,10 @@
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(1)">Chếch phải</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(2)">Chếch trái</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(3)">Nhìn cao</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(4)">Gần ngang</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(5)">Sau phải</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(6)">Sau trái</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(7)">Mặt sau</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="toggleFull()">Toàn màn hình</button>
       </div>
     </div>
@@ -819,10 +823,14 @@ function onHeightInput(){
 }
 // ====== CÁC GÓC NHÌN CHUẨN (cố định) - đường gióng đã canh sạch cho từng góc, không xoay tự do ======
 const VIEWS=[
-  {yaw:Math.PI/4, elev:0.62},   // 0 Góc chuẩn (iso 45°)
-  {yaw:0.50,      elev:0.60},   // 1 Chếch phải (thấy mặt đầu phải rõ hơn)
-  {yaw:1.07,      elev:0.60},   // 2 Chếch trái
-  {yaw:Math.PI/4, elev:0.95},   // 3 Nhìn cao (gần từ trên xuống)
+  {yaw:Math.PI/4,       elev:0.62},   // 0 Góc chuẩn (iso 45°)
+  {yaw:0.30,            elev:0.60},   // 1 Chếch phải
+  {yaw:1.27,            elev:0.60},   // 2 Chếch trái
+  {yaw:Math.PI/4,       elev:1.05},   // 3 Nhìn cao (gần từ trên)
+  {yaw:Math.PI/4,       elev:0.30},   // 4 Gần ngang (thấp, thấy mặt cạnh)
+  {yaw:Math.PI/4+2.0,   elev:0.60},   // 5 Sau phải (xoay ra góc đối diện)
+  {yaw:Math.PI/4-2.0,   elev:0.60},   // 6 Sau trái
+  {yaw:Math.PI/4+Math.PI, elev:0.62}, // 7 Mặt sau (xoay 180°)
 ];
 let curView=0;
 function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.yaw,elev:v.elev};
