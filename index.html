@@ -697,7 +697,7 @@ function buildBlock(){
   const nCol=blkNW;
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
-  cau.push([linkN+' Nan liên kết (nan gánh)',(linkRot?W:L)+'x'+linkW+'x'+linkT+'mm']);
+  cau.push([linkN+' Nan liên kết (nan gánh)',(linkRot?L:W)+'x'+linkW+'x'+linkT+'mm']);
   cau.push([(blkNL*blkNW)+' Chân cục',blkA+'x'+blkB+'x'+blkH+'mm']);
   if(faces===2)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   else { cau.push([nCol+' Giằng đáy dọc',L+'x'+botW+'x'+botT+'mm']);
