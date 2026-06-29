@@ -247,11 +247,11 @@
 <script src="assets/logo.js"></script>
 <script>
 const A=Math.PI/6,COS=Math.cos(A),SIN=0.40; // SIN thấp hơn 0.5 = camera thấp hơn -> lộ rõ mặt trước + nan đáy dưới chân
-// Góc nhìn 3D XOAY kiểu BÀN XOAY (turntable): yaw = xoay quanh trục đứng (360°); pitch = độ nén chiều sâu (camera cao/thấp).
-// Mặc định yaw=45°, pitch=0.566 -> TRÙNG KHỚP hình iso cũ ((x-y)*0.866, (x+y)*0.40). HX giữ tỉ lệ ngang chuẩn.
-const HX=1.2247;
-const VIEW_DEFAULT={yaw:Math.PI/4,pitch:0.566};
-let VIEW={yaw:Math.PI/4,pitch:0.566};
+// Góc nhìn 3D = CAMERA TRỰC GIAO THẬT, 2 trục xoay: yaw (trái-phải, quanh trục đứng) + elev (lên-xuống, góc nghiêng camera thật).
+// Phép chiếu cứng (rigid) -> KHÔNG méo ở mọi góc; cạnh đứng luôn thẳng đứng. Mặc định ~ iso (yaw 45°, elev 35°).
+const ELEV_MIN=0.14, ELEV_MAX=1.45;   // ~8° (gần ngang) .. ~83° (gần nhìn từ trên)
+const VIEW_DEFAULT={yaw:Math.PI/4,elev:0.615};
+let VIEW={yaw:Math.PI/4,elev:0.615};
 const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();};LOGO.src=window.LOGO_DATA;
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -476,12 +476,12 @@ function buildCollar(){
 
 /* ---------- ISO RENDER ---------- */
 function proj(x,y,z,s,ox,oy){
-  // BÀN XOAY: xoay (x,y) quanh trục đứng theo yaw -> chiếu thẳng (ngang giữ tỉ lệ HX, sâu nén theo pitch), z luôn dựng đứng.
-  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);
-  const a=x*c - y*sn, d=x*sn + y*c;
-  return {X:ox+a*HX*s, Y:oy+d*VIEW.pitch*s - z*s};
+  // CAMERA TRỰC GIAO THẬT: xoay quanh trục đứng (yaw) rồi nghiêng theo góc elev. Cứng -> không méo; cạnh đứng luôn dọc.
+  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw),se=Math.sin(VIEW.elev),ce=Math.cos(VIEW.elev);
+  const x1=x*c - y*sn, y1=x*sn + y*c;
+  return {X:ox+x1*s, Y:oy+(y1*se - z*ce)*s};
 }
-// độ sâu vào màn (trục d đã xoay) của TÂM box -> vẽ xa trước, gần sau
+// độ sâu vào màn của TÂM box (mặt phẳng đáy đã xoay) -> vẽ xa trước, gần sau
 function boxDepth(b){const cx=b.x+b.dx/2,cy=b.y+b.dy/2;return cx*Math.sin(VIEW.yaw)+cy*Math.cos(VIEW.yaw);}
 function drawBox(ctx,b,s,ox,oy){
   // Nét kỹ thuật xám sạch (kiểu SketchUp): 3 mặt sáng dần, viền đen mảnh - KHÔNG vân gỗ.
@@ -771,7 +771,7 @@ function toggleFull(){
   if(rq){const p=rq.call(el);if(p&&p.catch)p.catch(()=>alert('Không vào được toàn màn hình (trình duyệt chặn trong khung nhúng).'));}
   else alert('Trình duyệt không hỗ trợ toàn màn hình.');
 }
-function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,pitch:VIEW_DEFAULT.pitch};render();}
+function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,elev:VIEW_DEFAULT.elev};render();}
 // ====== KÉO CHUỘT / CHẠM ĐỂ XOAY HÌNH 3D ======
 (function(){
   const cv=$('sheet'); let drag=null,raf=0;
@@ -779,8 +779,8 @@ function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,pitch:VIEW_DEFAULT.pitch};render
   function pt(e){return e.touches&&e.touches[0]?e.touches[0]:e;}
   function logical(e){const r=cv.getBoundingClientRect(),p=pt(e);return {x:(p.clientX-r.left)*1500/r.width, y:(p.clientY-r.top)*1280/r.height};}
   function in3D(p){return p.x>=32&&p.x<=1036&&p.y>=150&&p.y<=752;}   // vùng ô phối cảnh 3D
-  function down(e){const p=pt(e);if(!in3D(logical(e)))return;drag={x:p.clientX,y:p.clientY,yaw:VIEW.yaw,pitch:VIEW.pitch};cv.style.cursor='grabbing';if(e.cancelable)e.preventDefault();}
-  function move(e){if(!drag){if(e.type==='mousemove')cv.style.cursor=in3D(logical(e))?'grab':'default';return;}const p=pt(e);VIEW.yaw=drag.yaw+(p.clientX-drag.x)*0.01;VIEW.pitch=Math.max(0.12,Math.min(0.95,drag.pitch+(p.clientY-drag.y)*0.0016));reqRender();if(e.cancelable)e.preventDefault();}
+  function down(e){const p=pt(e);if(!in3D(logical(e)))return;drag={x:p.clientX,y:p.clientY,yaw:VIEW.yaw,elev:VIEW.elev};cv.style.cursor='grabbing';if(e.cancelable)e.preventDefault();}
+  function move(e){if(!drag){if(e.type==='mousemove')cv.style.cursor=in3D(logical(e))?'grab':'default';return;}const p=pt(e);VIEW.yaw=drag.yaw+(p.clientX-drag.x)*0.01;VIEW.elev=Math.max(ELEV_MIN,Math.min(ELEV_MAX,drag.elev+(p.clientY-drag.y)*0.004));reqRender();if(e.cancelable)e.preventDefault();}
   function up(){if(drag){drag=null;cv.style.cursor='grab';}}
   cv.addEventListener('mousedown',down);window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
   cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
