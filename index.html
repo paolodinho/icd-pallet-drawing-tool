@@ -120,12 +120,12 @@
         <div><label>Rộng (mm)</label><input id="topW" type="number" value="75"></div>
         <div><label>Dày (mm)</label><input id="topT" type="number" value="15"></div>
       </div>
-      <div class="chk"><input type="checkbox" id="topRot" onchange="render()"><label style="margin:0">Đổi chiều nan trên (xoay 90&deg; - chạy theo chiều dài L)</label></div>
+      <div class="chk"><input type="checkbox" id="topRot" onchange="updateBotGroup();render()"><label style="margin:0">Đổi chiều nan trên (xoay 90&deg; - chạy theo chiều dài L)</label></div>
     </div>
 
-    <!-- BLOCK -->
-    <div class="grp" data-eng="block">
-      <div class="gt">Nan liên kết (dọc)</div>
+    <!-- NAN LIÊN KẾT (block luôn có; stringer chỉ khi đổi chiều nan trên) -->
+    <div class="grp" id="g-link" data-eng="block">
+      <div class="gt" id="g-link-title">Nan liên kết (dọc)</div>
       <div class="row">
         <div><label>Số lượng</label><input id="linkN" type="number" value="3"></div>
         <div><label>Rộng</label><input id="linkW" type="number" value="75"></div>
@@ -386,6 +386,14 @@ function updateBotGroup(){
     if($('lbl-strW'))$('lbl-strW').textContent = twoFace ? 'Rộng' : 'Rộng chân';
     if($('lbl-strH'))$('lbl-strH').textContent = twoFace ? 'Dày' : 'Cao chân';
   }
+  // Nhóm "Nan liên kết": block luôn hiện; stringer chỉ hiện khi ĐỔI CHIỀU nan trên (giằng ngang đỡ nan = nan liên kết).
+  const gl=$('g-link');
+  if(gl){
+    const topRot=$('topRot')&&$('topRot').checked;
+    const showLink = eng==='block' || (eng==='stringer' && topRot);
+    gl.style.display = showLink ? '' : 'none';
+    if($('g-link-title'))$('g-link-title').textContent = (eng==='stringer') ? 'Nan liên kết (giằng ngang đỡ nan)' : 'Nan liên kết (dọc)';
+  }
 }
 
 /* ---------- MODEL BUILDERS ---------- */
@@ -448,9 +456,10 @@ function buildStringer(){
   const notch=$('notch').checked && faces!==2;  // chốt: 2 mặt 2 chiều không bao giờ khoét chân
   // sàn đáy dùng thông số nan đáy riêng (rơi về như nan trên nếu chưa nhập)
   const botW=num('botW')||topW, botT=num('botT')||topT, botN=num('botN')||topN;
-  // Khi XOAY nan trên (nan chạy DỌC L, SONG SONG chân suốt) -> phải có GIẰNG NGANG đỡ, nếu không nan treo trên không khí.
-  const bearer=topRot, bearerN=3;
-  const zStr=hasBot?botT:0, strTop=zStr+strH, zDeck=strTop+(bearer?topT:0), Htot=zDeck+topT;
+  // Khi XOAY nan trên (nan chạy DỌC L, SONG SONG chân suốt) -> phải có GIẰNG NGANG (= NAN LIÊN KẾT) đỡ, nếu không nan treo trên không khí.
+  const bearer=topRot;
+  const linkN=num('linkN')||3, linkW=num('linkW')||topW, linkT=num('linkT')||topT;
+  const zStr=hasBot?botT:0, strTop=zStr+strH, zDeck=strTop+(bearer?linkT:0), Htot=zDeck+topT;
   const boxes=[];
   if(hasBot)boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); // sàn đáy
   const ys=positions(strN,strW,W);
@@ -463,12 +472,12 @@ function buildStringer(){
         notches:[{cx:L*0.285,hw:L*0.105,nh},{cx:L*0.715,hw:L*0.105,nh}]});
     }
   });
-  // GIẰNG NGANG trên đầu chân (đỡ nan trên khi nan chạy dọc)
-  if(bearer)positions(bearerN,topW,L).forEach(x=>boxes.push({x,y:0,z:strTop,dx:topW,dy:W,dz:topT,kind:'board'}));
+  // GIẰNG NGANG (NAN LIÊN KẾT) trên đầu chân (đỡ nan trên khi nan chạy dọc)
+  if(bearer)positions(linkN,linkW,L).forEach(x=>boxes.push({x,y:0,z:strTop,dx:linkW,dy:W,dz:linkT,kind:'board'}));
   boxes.push(...deck(topRot,topN,topW,topT,zDeck,L,W));
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
-  if(bearer)cau.push([bearerN+' Giằng ngang đỡ nan',W+'x'+topW+'x'+topT+'mm']);
+  if(bearer)cau.push([linkN+' Nan liên kết',W+'x'+linkW+'x'+linkT+'mm']);
   cau.push([strN+(hasBot?' Nan liên kết':(notch?' Chân khoét':' Chân suốt')),L+'x'+strW+'x'+strH+'mm']);
   if(hasBot)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   const adims=[
@@ -476,7 +485,7 @@ function buildStringer(){
     {a:[L,0,zStr],b:[L,0,strTop],off:{x:34,y:0},label:strH+'',wit:1},
     {a:[L,0,zDeck],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
   ];
-  if(bearer)adims.push({a:[L,0,strTop],b:[L,0,zDeck],off:{x:34,y:0},label:topT+'',wit:1});
+  if(bearer)adims.push({a:[L,0,strTop],b:[L,0,zDeck],off:{x:34,y:0},label:linkT+'',wit:1});
   if(hasBot)adims.push({a:[L,0,0],b:[L,0,botT],off:{x:34,y:0},label:botT+'',wit:1});
   return {L,W,Htot,boxes,cau,faces,adims};
 }
