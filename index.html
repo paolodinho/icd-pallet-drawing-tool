@@ -325,6 +325,7 @@ function applyStyle(){
   }
   if($('topRot'))$('topRot').checked=!!p.topRot;
   if($('botRot'))$('botRot').checked=!!p.botRot;
+  setBotRotLock();
   if(p.dyn)set('dynLoad',p.dyn); if(p.sta)set('staLoad',p.sta);
   applySize(true); // áp khổ đang chọn lên kiểu dáng mới
 }
@@ -337,7 +338,17 @@ function applySize(skipStyle){
 }
 function onFaces(){
   if($('engine').value==='block'){ set('botN', parseInt($('faces').value)===2 ? num('topN') : 3); }
+  setBotRotLock();
   render();
+}
+// Khóa chân (block 1 mặt) đã giằng đáy CẢ 2 CHIỀU -> nút đổi chiều nan đáy vô nghĩa -> disable + làm mờ.
+function setBotRotLock(){
+  if(!$('botRot'))return;
+  const lock = $('engine').value==='block' && parseInt($('faces').value)===1;
+  if(lock)$('botRot').checked=false;
+  $('botRot').disabled=lock;
+  const chk=$('botRot').closest('.chk');
+  if(chk){chk.style.opacity=lock?'0.4':'1';chk.title=lock?'Khóa chân đã giằng đáy cả 2 chiều, không cần đổi chiều':'';}
 }
 function setEngine(eng){
   document.querySelectorAll('[data-eng]').forEach(el=>{
