@@ -77,7 +77,11 @@
   .saved-list{display:flex;flex-direction:column;gap:5px}
   .saved-item{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:7px;overflow:hidden;background:#FAFBFC}
   .saved-item:hover{border-color:#FB7703}
-  .saved-name{flex:1;font-size:13px;font-weight:600;color:var(--dark);padding:8px 10px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .saved-name{flex:1;font-size:13px;font-weight:600;color:var(--dark);padding:7px 10px;cursor:pointer;line-height:1.25;overflow:hidden}
+  .saved-name small{display:block;font-size:11px;color:#9AA3AB;font-weight:400;margin-top:1px}
+  .saved-group{font-size:11px;font-weight:700;color:#FB7703;text-transform:uppercase;letter-spacing:.04em;margin:11px 0 3px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+  .saved-group span{color:#9AA3AB;font-weight:600}
+  .saved-search{width:100%;margin-bottom:8px;box-sizing:border-box}
   .saved-name:hover{color:var(--orange)}
   .saved-load{padding:7px 10px;font-size:12px;font-weight:700;color:var(--orange);background:none;border:none;border-left:1px solid var(--line);cursor:pointer;white-space:nowrap}
   .saved-load:hover{background:#FFF8F2}
@@ -259,6 +263,7 @@
         <input id="saveName" placeholder="Tên mẫu (vd: Pallet 1200x1000 EPAL)">
         <button onclick="saveDesign()">Lưu mẫu</button>
       </div>
+      <input id="saveSearch" class="saved-search" placeholder="Tìm mẫu theo tên..." oninput="renderSavedList()">
       <div id="savedList" class="saved-list"></div>
     </div>
 
@@ -788,6 +793,27 @@ function drawPalletInto(ctx,area,m){
   totalDim(farEdge([[[0,0,0],[L,0,0]],[[0,W,0],[L,W,0]]]), L+' mm', 30);                 // L: 2 cạnh dọc trục x
   totalDim(farEdge([[[0,0,0],[0,W,0]],[[L,0,0],[L,W,0]]]), W+' mm', 30);                 // W: 2 cạnh dọc trục y
   totalDim(farEdge([[[0,0,0],[0,0,H]],[[L,0,0],[L,0,H]],[[0,W,0],[0,W,H]],[[L,W,0],[L,W,H]]]), Math.round(H)+' mm', 30); // H: 4 cạnh đứng
+  // ===== COTE CHI TIẾT (rộng nan/khe + độ dày từng lớp) — cùng perp-outward -> bám đúng cạnh ở MỌI góc xoay =====
+  (m.adims||[]).forEach(d=>{
+    const q1=pj(d.a),q2=pj(d.b);
+    const ex=q2.X-q1.X,ey=q2.Y-q1.Y,len=Math.hypot(ex,ey); if(len<4)return;   // bỏ cote quá ngắn (khe ~0)
+    let nx=-ey/len,ny=ex/len;
+    const mx=(q1.X+q2.X)/2,my=(q1.Y+q2.Y)/2;
+    if((mx-ctr.X)*nx+(my-ctr.Y)*ny<0){nx=-nx;ny=-ny;}   // pháp tuyến ra ngoài tâm
+    const off=16;
+    const e1={X:q1.X+nx*off,Y:q1.Y+ny*off},e2={X:q2.X+nx*off,Y:q2.Y+ny*off};
+    ctx.save();
+    ctx.strokeStyle='#C2C7CB';ctx.lineWidth=0.6;   // đường gióng nhạt
+    ctx.beginPath();ctx.moveTo(q1.X,q1.Y);ctx.lineTo(e1.X+nx*3,e1.Y+ny*3);ctx.moveTo(q2.X,q2.Y);ctx.lineTo(e2.X+nx*3,e2.Y+ny*3);ctx.stroke();
+    ctx.strokeStyle='#5A6168';ctx.lineWidth=0.7;   // đường cote
+    ctx.beginPath();ctx.moveTo(e1.X,e1.Y);ctx.lineTo(e2.X,e2.Y);ctx.stroke();
+    const tx=nx*3,ty=ny*3;[e1,e2].forEach(p=>{ctx.beginPath();ctx.moveTo(p.X-tx,p.Y-ty);ctx.lineTo(p.X+tx,p.Y+ty);ctx.stroke();});
+    const lx=(e1.X+e2.X)/2+nx*9,ly=(e1.Y+e2.Y)/2+ny*9;
+    ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.strokeText(d.label,lx,ly);
+    ctx.fillStyle='#5A6168';ctx.fillText(d.label,lx,ly);
+    ctx.restore();
+  });
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
