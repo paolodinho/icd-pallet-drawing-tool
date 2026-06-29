@@ -362,7 +362,7 @@ function deckDims(rot,N,bw,L,W,Htot){
 const STYLES=[
  {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân suốt (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,botW:90,botT:15,botN:8,dyn:1500,sta:3000},
  {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
- {id:'block-2mat-cuc',label:'Pallet 2 mặt 4 chiều - chân cục (đố) kiểu EPAL',name:'PALLET GỖ 2 MẶT 4 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:22,topN:7,linkW:100,linkT:22,linkN:3,blkA:145,blkB:145,blkH:100,blkNL:3,blkNW:3,botW:100,botT:22,botN:3,dyn:1500,sta:4000,blkFixed:true},
+ {id:'block-2mat-cuc',label:'Pallet 2 mặt 4 chiều - chân cục (đố) kiểu EPAL',name:'PALLET GỖ 2 MẶT 4 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:22,topN:7,linkW:100,linkT:22,linkN:3,blkA:145,blkB:145,blkH:100,blkNL:3,blkNW:3,botW:100,botT:22,botN:3,dyn:1500,sta:4000,blkFixed:true,blkChamfer:15},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - chân suốt',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
  {id:'collar',label:'Khung gỗ pallet (collar)',name:'KHUNG GỖ PALLET',engine:'collar',faces:1,colT:20,colH:195},
@@ -443,6 +443,7 @@ function applyStyle(){
   $('engine').value=p.engine; setEngine(p.engine);
   if(p.faces)$('faces').value=p.faces;
   ['topW','topT','topN','linkW','linkT','linkN','blkA','blkB','blkH','blkNL','blkNW','botW','botT','botN','strW','strH','strN','colT','colH'].forEach(k=>set(k,p[k]));
+  set('blkChamfer', p.blkChamfer||0); // EPAL có vát góc chân; kiểu khác mặc định 0
   // Khi đổi kiểu dáng: reset về auto-sync (bỏ tick custom)
   if($('blkCustom')){ $('blkCustom').checked=false; onBlkCustom(); }
   // Chân cục KHỚP bề rộng nan (dài a = rộng nan đáy, rộng b = rộng nan liên kết)
@@ -845,7 +846,13 @@ function draw2DSide(ctx,area,m){
       return;
     }
     ctx.fillStyle=b.kind==='block'?'#CFD3D6':'#E4E7E9';
-    ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
+    if(b.kind==='block' && b.chamfer>0){ // chân cục vát góc đáy (EPAL) - vẽ profile có vát 2 góc dưới
+      const ch=b.chamfer, x0=b.x, x1=b.x+b.dx, z0=b.z, z1=b.z+b.dz;
+      const pts=[[x0,z1],[x1,z1],[x1,z0+ch],[x1-ch,z0],[x0+ch,z0],[x0,z0+ch]];
+      ctx.beginPath();pts.forEach((p,i)=>{const xx=X(p[0]),yy=Y(p[1]);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);});ctx.closePath();ctx.fill();ctx.stroke();
+    } else {
+      ctx.fillRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);ctx.strokeRect(X(b.x),Y(b.z+b.dz),b.dx*s,b.dz*s);
+    }
   });
   vDim(ctx,Y(0),Y(H),X(0)-24,Math.round(H)+' mm');
   hDim(ctx,X(0),X(L),Y(0)+30,L+' mm');
