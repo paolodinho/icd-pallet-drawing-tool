@@ -191,10 +191,14 @@
   </div>
 
   <div class="panel out">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h3 style="margin:2px 0 12px">Bản vẽ kết quả</h3>
-      <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="toggleFull()">Xem toàn màn hình</button>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="resetView()">Xoay về mặc định</button>
+        <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="toggleFull()">Xem toàn màn hình</button>
+      </div>
     </div>
+    <div class="hint" style="margin:0 0 8px">Mẹo: giữ chuột kéo trên hình 3D để xoay xem pallet theo mọi chiều (kéo ngang = xoay quanh, kéo dọc = nâng/hạ góc nhìn).</div>
     <div id="canvasWrap"><canvas id="sheet" width="1400" height="980"></canvas></div>
   </div>
 </div>
@@ -243,6 +247,9 @@
 <script src="assets/logo.js"></script>
 <script>
 const A=Math.PI/6,COS=Math.cos(A),SIN=0.40; // SIN thấp hơn 0.5 = camera thấp hơn -> lộ rõ mặt trước + nan đáy dưới chân
+// Góc nhìn 3D có thể XOAY bằng chuột/kéo. yaw = xoay quanh trục đứng (360°); pitch = độ nghiêng camera (cao/thấp).
+const VIEW_DEFAULT={yaw:0,pitch:0.40};
+let VIEW={yaw:0,pitch:0.40};
 const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();};LOGO.src=window.LOGO_DATA;
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -466,7 +473,13 @@ function buildCollar(){
 }
 
 /* ---------- ISO RENDER ---------- */
-function proj(x,y,z,s,ox,oy){return {X:ox+(x-y)*COS*s,Y:oy+(x+y)*SIN*s-z*s};}
+function proj(x,y,z,s,ox,oy){
+  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);   // xoay quanh trục đứng Z trước
+  const xr=x*c-y*sn, yr=x*sn+y*c;
+  return {X:ox+(xr-yr)*COS*s, Y:oy+(xr+yr)*VIEW.pitch*s - z*s};
+}
+// độ sâu (đã xoay) của TÂM box -> sắp xếp vẽ xa trước, gần sau theo góc nhìn hiện tại
+function boxDepth(b){const cx=b.x+b.dx/2,cy=b.y+b.dy/2,c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);return (cx*c-cy*sn)+(cx*sn+cy*c);}
 function drawBox(ctx,b,s,ox,oy){
   // Nét kỹ thuật xám sạch (kiểu SketchUp): 3 mặt sáng dần, viền đen mảnh - KHÔNG vân gỗ.
   const {x,y,z,dx,dy,dz}=b,zt=z+dz;
@@ -523,7 +536,7 @@ function drawPalletInto(ctx,area,m){
   const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
   ctx.save();ctx.fillStyle='rgba(39,52,58,.06)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+12,q.Y+16):ctx.moveTo(q.X+12,q.Y+16));ctx.closePath();ctx.fill();ctx.restore();
   // Vẽ theo LỚP từ dưới lên (z trước), trong cùng lớp thì xa -> gần (x+y) -> xếp chồng đúng, không có thanh "bay".
-  [...m.boxes].sort((a,b)=>(a.z-b.z)||((a.x+a.dx/2+a.y+a.dy/2)-(b.x+b.dx/2+b.y+b.dy/2))).forEach(b=>b.kind==='notch'?drawNotchStr(ctx,b,s,ox,oy):drawBox(ctx,b,s,ox,oy));
+  [...m.boxes].sort((a,b)=>(a.z-b.z)||(boxDepth(a)-boxDepth(b))).forEach(b=>b.kind==='notch'?drawNotchStr(ctx,b,s,ox,oy):drawBox(ctx,b,s,ox,oy));
   let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
   let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
   let pe=proj(L,W,0,s,ox,oy),pf=proj(L,W,H,s,ox,oy);pe={X:pe.X+46,Y:pe.Y};pf={X:pf.X+46,Y:pf.Y};
@@ -751,6 +764,20 @@ function toggleFull(){
   if(rq){const p=rq.call(el);if(p&&p.catch)p.catch(()=>alert('Không vào được toàn màn hình (trình duyệt chặn trong khung nhúng).'));}
   else alert('Trình duyệt không hỗ trợ toàn màn hình.');
 }
+function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,pitch:VIEW_DEFAULT.pitch};render();}
+// ====== KÉO CHUỘT / CHẠM ĐỂ XOAY HÌNH 3D ======
+(function(){
+  const cv=$('sheet'); let drag=null,raf=0;
+  function reqRender(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;render();});}
+  function pt(e){return e.touches&&e.touches[0]?e.touches[0]:e;}
+  function logical(e){const r=cv.getBoundingClientRect(),p=pt(e);return {x:(p.clientX-r.left)*1500/r.width, y:(p.clientY-r.top)*1280/r.height};}
+  function in3D(p){return p.x>=32&&p.x<=1036&&p.y>=150&&p.y<=752;}   // vùng ô phối cảnh 3D
+  function down(e){const p=pt(e);if(!in3D(logical(e)))return;drag={x:p.clientX,y:p.clientY,yaw:VIEW.yaw,pitch:VIEW.pitch};cv.style.cursor='grabbing';if(e.cancelable)e.preventDefault();}
+  function move(e){if(!drag){if(e.type==='mousemove')cv.style.cursor=in3D(logical(e))?'grab':'default';return;}const p=pt(e);VIEW.yaw=drag.yaw+(p.clientX-drag.x)*0.01;VIEW.pitch=Math.max(0.12,Math.min(0.95,drag.pitch+(p.clientY-drag.y)*0.0016));reqRender();if(e.cancelable)e.preventDefault();}
+  function up(){if(drag){drag=null;cv.style.cursor='grab';}}
+  cv.addEventListener('mousedown',down);window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
+})();
 buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();
 if(!UNLOCKED){openEntryModal();}   // vào trang: hiện popup chọn cách dùng
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
