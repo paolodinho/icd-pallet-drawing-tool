@@ -143,8 +143,8 @@
         <div><label>Số cục theo rộng</label><input id="blkNW" type="number" value="3"></div>
       </div>
     </div>
-    <div class="grp" data-eng="block">
-      <div class="gt">Nan đáy (khi 2 mặt / chu vi)</div>
+    <div class="grp" id="g-bot" data-eng="block stringer">
+      <div class="gt">Nan đáy (mặt dưới)</div>
       <div class="row">
         <div><label>Rộng</label><input id="botW" type="number" value="75"></div>
         <div><label>Dày</label><input id="botT" type="number" value="15"></div>
@@ -279,7 +279,7 @@ function deckDims(rot,N,bw,L,W,Htot){
 
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
- {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân suốt (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,dyn:1500,sta:3000},
+ {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân suốt (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,botW:90,botT:15,botN:8,dyn:1500,sta:3000},
  {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - chân suốt',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
@@ -325,7 +325,7 @@ function applyStyle(){
   }
   if($('topRot'))$('topRot').checked=!!p.topRot;
   if($('botRot'))$('botRot').checked=!!p.botRot;
-  setBotRotLock();
+  setBotRotLock(); updateBotGroup();
   if(p.dyn)set('dynLoad',p.dyn); if(p.sta)set('staLoad',p.sta);
   applySize(true); // áp khổ đang chọn lên kiểu dáng mới
 }
@@ -338,7 +338,7 @@ function applySize(skipStyle){
 }
 function onFaces(){
   if($('engine').value==='block'){ set('botN', parseInt($('faces').value)===2 ? num('topN') : 3); }
-  setBotRotLock();
+  setBotRotLock(); updateBotGroup();
   render();
 }
 // Khóa chân (block 1 mặt) đã giằng đáy CẢ 2 CHIỀU -> nút đổi chiều nan đáy vô nghĩa -> disable + làm mờ.
@@ -355,6 +355,16 @@ function setEngine(eng){
     el.style.display = el.getAttribute('data-eng').split(' ').includes(eng)?'':'none';
   });
   $('f-faces').style.display = (eng==='collar')?'none':'';
+  updateBotGroup();
+}
+// Khối "Nan đáy" chỉ hiện khi pallet THỰC SỰ có đáy:
+//  - block: luôn có (1 mặt = giằng khóa chân; 2 mặt = sàn đáy)
+//  - stringer: chỉ 2 mặt mới có sàn đáy; 1 mặt (chân suốt) KHÔNG có đáy
+function updateBotGroup(){
+  const g=$('g-bot'); if(!g)return;
+  const eng=$('engine').value, faces=parseInt($('faces').value);
+  const hasBot = eng==='block' || (eng==='stringer' && faces===2);
+  g.style.display = hasBot ? '' : 'none';
 }
 
 /* ---------- MODEL BUILDERS ---------- */
@@ -415,9 +425,11 @@ function buildStringer(){
   const faces=parseInt($('faces').value), hasBot=faces===2;
   const topRot=$('topRot')&&$('topRot').checked, botRot=$('botRot')&&$('botRot').checked;
   const notch=$('notch').checked && faces!==2;  // chốt: 2 mặt 2 chiều không bao giờ khoét chân
-  const zStr=hasBot?topT:0, zTop=zStr+strH, Htot=zTop+topT;
+  // sàn đáy dùng thông số nan đáy riêng (rơi về như nan trên nếu chưa nhập)
+  const botW=num('botW')||topW, botT=num('botT')||topT, botN=num('botN')||topN;
+  const zStr=hasBot?botT:0, zTop=zStr+strH, Htot=zTop+topT;
   const boxes=[];
-  if(hasBot)boxes.push(...deck(botRot,topN,topW,topT,0,L,W)); // sàn đáy
+  if(hasBot)boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); // sàn đáy
   const ys=positions(strN,strW,W);
   ys.forEach(y=>{
     if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
@@ -432,7 +444,7 @@ function buildStringer(){
   const cau=[];
   cau.push(['Nan mặt trên',topW+'x'+topT+'x'+(topRot?L:W)+'mm','('+topN+' nan)']);
   cau.push([notch?'Chân khoét (dọc)':'Chân suốt (dọc)',strW+'x'+strH+'x'+L+'mm','('+strN+' chân'+(notch?', khoét 2 hốc':'')+')']);
-  if(hasBot)cau.push(['Nan đáy (mặt dưới)',topW+'x'+topT+'x'+(botRot?L:W)+'mm','('+topN+' nan)']);
+  if(hasBot)cau.push(['Nan đáy (mặt dưới)',botW+'x'+botT+'x'+(botRot?L:W)+'mm','('+botN+' nan)']);
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
     {a:[L,0,zStr],b:[L,0,zStr+strH],off:{x:30,y:-4},label:strH+''},
