@@ -108,7 +108,7 @@
       <div class="row">
         <div><label>Dài L (mm)</label><input id="L" type="number" value="1219"></div>
         <div><label>Rộng W (mm)</label><input id="W" type="number" value="1016"></div>
-        <div><label>Cao H (tự tính)</label><input id="Hdisp" type="text" value="" readonly style="background:#F4F5F7;color:#27343A;font-weight:600"></div>
+        <div><label>Cao H (mm)</label><input id="Hdisp" type="number" value=""></div>
       </div>
     </div>
 
@@ -659,7 +659,7 @@ function viewLabel(ctx,x,y,t){ctx.fillStyle='#6B7680';ctx.font='600 13px Arial';
 let RENDER_DPR=2;   // 2x cho màn hình; tải ảnh tạm nâng lên 4x cho nét khi zoom/cắt
 function render(){
   const m=buildModel(),cv=$('sheet'),DPR=RENDER_DPR;
-  if($('Hdisp'))$('Hdisp').value=Math.round(m.Htot)+' mm';   // hiện chiều cao tổng (tự tính từ các lớp)
+  if($('Hdisp')&&document.activeElement!==$('Hdisp'))$('Hdisp').value=Math.round(m.Htot);   // đồng bộ H (không ghi đè khi đang gõ)
   const Wd=1500,Hd=1280;
   cv.width=Wd*DPR;cv.height=Hd*DPR;cv.style.aspectRatio=Wd+'/'+Hd;
   const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
@@ -790,6 +790,15 @@ function toggleFull(){
   if(rq){const p=rq.call(el);if(p&&p.catch)p.catch(()=>alert('Không vào được toàn màn hình (trình duyệt chặn trong khung nhúng).'));}
   else alert('Trình duyệt không hỗ trợ toàn màn hình.');
 }
+// Nhập chiều cao tổng -> tự chia ngược ra CHIỀU CAO CHÂN / NAN LIÊN KẾT (giữ nguyên độ dày các nan), sao cho tổng = H.
+function onHeightInput(){
+  const H=parseFloat($('Hdisp').value); if(!H||H<=0){render();return;}
+  const eng=$('engine').value;
+  const id = eng==='collar'?'colH' : (eng==='block'?'blkH':'strH');
+  const cur=num(id), fixed=buildModel().Htot - cur;   // phần cố định (các nan) = tổng - lớp giữa
+  set(id, Math.max(20, Math.round(H - fixed)));        // lớp giữa = H - phần cố định
+  render();
+}
 function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,elev:VIEW_DEFAULT.elev};render();}
 // ====== KÉO CHUỘT / CHẠM ĐỂ XOAY HÌNH 3D ======
 (function(){
@@ -816,7 +825,9 @@ buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();
 if(!UNLOCKED){openEntryModal();}   // vào trang: hiện popup chọn cách dùng
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
-  if(e.target.id==='style'||e.target.id==='size')return; render();
+  if(e.target.id==='style'||e.target.id==='size')return;
+  if(e.target.id==='Hdisp'){ if(e.type==='change')onHeightInput(); return; }  // H: chỉ chia ngược khi gõ xong (Enter/rời ô)
+  render();
 }));
 // Khi nhúng iframe: báo chiều cao NỘI DUNG THẬT cho trang cha (đo đáy header + .wrap,
 // KHÔNG dùng documentElement.scrollHeight vì nó trả về chiều cao viewport -> gây vòng lặp phình vô hạn).
