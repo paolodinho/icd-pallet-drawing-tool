@@ -521,7 +521,8 @@ function updateBotGroup(){
   const gl=$('g-link');
   if(gl){
     const topRot=$('topRot')&&$('topRot').checked;
-    const showLink = eng==='block' || (eng==='stringer' && topRot);
+    // block 2 mặt: nan trên đặt thẳng trên chân, KHÔNG có lớp nan liên kết -> ẩn nhóm. Chỉ block 1 mặt (khóa chân) mới có.
+    const showLink = (eng==='block' && faces===1) || (eng==='stringer' && topRot);
     gl.style.display = showLink ? '' : 'none';
     if($('g-link-title'))$('g-link-title').textContent = (eng==='stringer') ? 'Giằng ngang đỡ nan trên' : 'Nan liên kết (dọc)';
   }
@@ -543,7 +544,10 @@ function buildBlock(){
   const botW=num('botW'),botT=num('botT'),botN=num('botN');
   const faces=parseInt($('faces').value);
   const topRot=$('topRot')&&$('topRot').checked, botRot=$('botRot')&&$('botRot').checked;
-  const zBlock=botT, zLink=zBlock+blkH, zTop=zLink+linkT, Htot=zTop+topT;
+  // 2 mặt (EPAL): nan mặt trên đặt THẲNG trên chân (như thực tế) -> KHÔNG có lớp nan liên kết chèn giữa, tổng cao = botT+blkH+topT.
+  // 1 mặt (khóa chân): giữ lớp nan liên kết (boards dọc tì lên chân, dưới nan mặt).
+  const hasLink = (faces===1);
+  const zBlock=botT, zLink=zBlock+blkH, zTop=hasLink?(zLink+linkT):zLink, Htot=zTop+topT;
   const boxes=[];
   // Tâm các CỘT chân (theo chiều rộng W). Mỗi cột chân = 1 nan liên kết trên + 1 nan đáy dưới, CĂN THẲNG cột.
   const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân
@@ -559,14 +563,14 @@ function buildBlock(){
   }
   // CHÂN CỤC
   xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block',chamfer:blkChamfer})));
-  // NAN LIÊN KẾT: 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
-  colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-linkW/2,z:zLink,dx:L,dy:linkW,dz:linkT,kind:'board'}));
+  // NAN LIÊN KẾT (chỉ 1 mặt khóa chân): 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
+  if(hasLink) colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-linkW/2,z:zLink,dx:L,dy:linkW,dz:linkT,kind:'board'}));
   // NAN MẶT TRÊN: hướng theo topRot
   boxes.push(...deck(topRot,topN,topW,topT,zTop,L,W));
   const nCol=blkNW;
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
-  cau.push([nCol+' Nan liên kết',L+'x'+linkW+'x'+linkT+'mm']);
+  if(hasLink) cau.push([nCol+' Nan liên kết',L+'x'+linkW+'x'+linkT+'mm']);
   cau.push([(blkNL*blkNW)+' Chân cục',blkA+'x'+blkB+'x'+blkH+'mm']);
   if(faces===2)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   else { cau.push([nCol+' Giằng đáy dọc',L+'x'+botW+'x'+botT+'mm']);
