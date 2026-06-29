@@ -448,6 +448,8 @@ function applyStyle(){
     $('notch').disabled=lockNotch;
     if(lockNotch)$('notch').checked=false;
     const chk=$('notch').closest('.chk'); if(chk){chk.style.opacity=lockNotch?'0.4':'1';chk.title=lockNotch?'Loại 2 mặt 2 chiều dùng chân suốt kín, không khoét chân':'';}
+    // Sync notch shape row visibility
+    const row=$('notch-shape-row'); if(row)row.style.display=($('notch').checked&&!lockNotch)?'':'none';
   }
   if($('topRot'))$('topRot').checked=!!p.topRot;
   if($('botRot'))$('botRot').checked=!!p.botRot;
@@ -1007,7 +1009,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
   document.querySelectorAll('.vbtn').forEach((b,k)=>{b.style.borderColor=(k===curView)?'#FB7703':'';b.style.color=(k===curView)?'#FB7703':'';});
   render();}
 /* ===== LƯU / TẢI MẪU ===== */
-const SAVE_KEY='icd_pallet_saved';
+const API='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot',
   'linkN','linkW','linkT','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
   'botN','botW','botT','botRot','strN','strW','strH','notch','colT','colH','dynLoad','staLoad','moist','treat','color'];
@@ -1022,31 +1024,48 @@ function setFormState(s){
   updateBotGroup();
   if(s._view!==undefined)setView(s._view);else render();
 }
-function getSaved(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'[]');}catch(e){return[];}}
-function setSaved(arr){try{localStorage.setItem(SAVE_KEY,JSON.stringify(arr));}catch(e){alert('Khong luu duoc.');}}
-function saveDesign(){
+let _savedCache=null;
+async function loadSavedCache(){
+  try{const r=await fetch(API);_savedCache=await r.json();}catch(e){_savedCache=[];}
+}
+async function saveDesign(){
   const name=($('saveName').value||'').trim();
   if(!name){$('saveName').focus();$('saveName').style.borderColor='#FB7703';return;}
   $('saveName').style.borderColor='';
-  const arr=getSaved();
-  const i=arr.findIndex(d=>d.name===name);
-  const entry={name,state:getFormState(),ts:Date.now()};
-  if(i>=0){if(!confirm('Mau "'+name+'" da ton tai. Ghi de?'))return;arr[i]=entry;}else{arr.unshift(entry);}
-  setSaved(arr);$('saveName').value='';renderSavedList();
+  if(_savedCache&&_savedCache.find(d=>d.name===name)){
+    if(!confirm('Mau "'+name+'" da ton tai. Ghi de?'))return;
+  }
+  const btn=$('savedList').previousElementSibling.querySelector('button');
+  if(btn){btn.textContent='Dang luu...';btn.disabled=true;}
+  try{
+    await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,state:getFormState()})});
+    $('saveName').value='';
+    await loadSavedCache();
+    renderSavedList();
+  }catch(e){alert('Loi luu: '+e.message);}
+  if(btn){btn.textContent='Luu mau';btn.disabled=false;}
 }
-function loadDesign(idx){const arr=getSaved();if(!arr[idx])return;setFormState(arr[idx].state);}
-function deleteDesign(idx){
-  const arr=getSaved();if(!arr[idx])return;
-  if(!confirm('Xoa mau "'+arr[idx].name+'"?'))return;
-  arr.splice(idx,1);setSaved(arr);renderSavedList();
+async function loadDesign(idx){
+  if(!_savedCache||!_savedCache[idx])return;
+  setFormState(_savedCache[idx].state);
+}
+async function deleteDesign(idx){
+  if(!_savedCache||!_savedCache[idx])return;
+  if(!confirm('Xoa mau "'+_savedCache[idx].name+'"?'))return;
+  try{
+    await fetch(API+'/'+encodeURIComponent(_savedCache[idx].name),{method:'DELETE'});
+    await loadSavedCache();
+    renderSavedList();
+  }catch(e){alert('Loi xoa: '+e.message);}
 }
 function renderSavedList(){
-  const arr=getSaved();const el=$('savedList');if(!el)return;
+  const arr=_savedCache||[];const el=$('savedList');if(!el)return;
   if(!arr.length){el.innerHTML='<div class="saved-empty">Chua co mau nao. Nhap ten roi bam Luu mau.</div>';return;}
   el.innerHTML=arr.map((d,i)=>'<div class="saved-item"><span class="saved-name" title="Tai mau: '+d.name+'" onclick="loadDesign('+i+')">'+d.name+'</span><button class="saved-load" onclick="loadDesign('+i+')">Tai</button><button class="saved-del" onclick="deleteDesign('+i+')" title="Xoa">&#x2715;</button></div>').join('');
 }
 
-buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();setView(0);renderSavedList();
+buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();setView(0);
+loadSavedCache().then(()=>renderSavedList());
 if(!UNLOCKED){openEntryModal();}   // vào trang: hiện popup chọn cách dùng
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
