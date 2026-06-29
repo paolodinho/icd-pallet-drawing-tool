@@ -578,13 +578,20 @@ function drawPalletInto(ctx,area,m){
   [pe,pf].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.5,0,7);ctx.fill();});
   ctx.save();ctx.translate((pe.X+pf.X)/2+16,(pe.Y+pf.Y)/2);ctx.rotate(-Math.PI/2);ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(Math.round(H)+' mm',0,0);ctx.fillStyle='#27343A';ctx.fillText(Math.round(H)+' mm',0,0);ctx.restore();
   // cote chi tiết (rộng nan, khe hở, độ dày, cao chân...)
+  const ctr=proj(L/2,W/2,H/2,s,ox,oy);   // tâm hình chiếu -> để đẩy cote RA NGOÀI
   (m.adims||[]).forEach(d=>{
     const q1=proj(d.a[0],d.a[1],d.a[2],s,ox,oy),q2=proj(d.b[0],d.b[1],d.b[2],s,ox,oy);
-    const e1={X:q1.X+d.off.x,Y:q1.Y+d.off.y},e2={X:q2.X+d.off.x,Y:q2.Y+d.off.y};
+    // Độ lệch VUÔNG GÓC với cạnh đo, hướng RA NGOÀI tâm -> đúng ở MỌI góc xoay (không dùng offset cố định theo màn hình nữa).
+    const ex=q2.X-q1.X,ey=q2.Y-q1.Y,len=Math.hypot(ex,ey)||1;
+    let nx=-ey/len,ny=ex/len;
+    const mx=(q1.X+q2.X)/2,my=(q1.Y+q2.Y)/2;
+    if((mx-ctr.X)*nx+(my-ctr.Y)*ny<0){nx=-nx;ny=-ny;}   // lật để luôn trỏ ra xa tâm
+    const offD=Math.hypot(d.off.x,d.off.y)||22, vx=nx*offD,vy=ny*offD;
+    const e1={X:q1.X+vx,Y:q1.Y+vy},e2={X:q2.X+vx,Y:q2.Y+vy};
     if(d.wit){   // đường gióng (witness) mảnh nối điểm thật trên vật thể -> đường cote, vượt nhẹ 3px
       ctx.save();ctx.strokeStyle='#AEB4B9';ctx.lineWidth=0.8;
-      [[q1,e1],[q2,e2]].forEach(([a,b])=>{const dx=b.X-a.X,dy=b.Y-a.Y,len=Math.hypot(dx,dy)||1,ex=dx/len*3,ey=dy/len*3;
-        ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(b.X+ex,b.Y+ey);ctx.stroke();});
+      [[q1,e1],[q2,e2]].forEach(([a,b])=>{const dgx=b.X-a.X,dgy=b.Y-a.Y,l2=Math.hypot(dgx,dgy)||1;
+        ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(b.X+dgx/l2*3,b.Y+dgy/l2*3);ctx.stroke();});
       ctx.restore();
     }
     dimLine(ctx,e1,e2,d.label,13);
