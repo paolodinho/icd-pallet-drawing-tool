@@ -337,6 +337,8 @@ function applyStyle(){
   $('engine').value=p.engine; setEngine(p.engine);
   if(p.faces)$('faces').value=p.faces;
   ['topW','topT','topN','linkW','linkT','linkN','blkA','blkB','blkH','blkNL','blkNW','botW','botT','botN','strW','strH','strN','colT','colH'].forEach(k=>set(k,p[k]));
+  // Chân cục mặc định KHỚP bề rộng nan (dài a = rộng nan đáy, rộng b = rộng nan liên kết) -> cục đố nằm gọn dưới nan, không thừa ra ngoài.
+  if(p.engine==='block'){ set('blkA',num('botW')); set('blkB',num('linkW')); }
   if($('notch')){
     $('notch').checked=!!p.notch;
     const lockNotch=(p.faces===2);            // 2 mặt 2 chiều = chân suốt kín -> KHÔNG cho khoét chân
@@ -519,17 +521,22 @@ function proj(x,y,z,s,ox,oy){
 // độ sâu vào màn của TÂM box (mặt phẳng đáy đã xoay) -> vẽ xa trước, gần sau
 function boxDepth(b){const cx=b.x+b.dx/2,cy=b.y+b.dy/2;return cx*Math.sin(VIEW.yaw)+cy*Math.cos(VIEW.yaw);}
 function drawBox(ctx,b,s,ox,oy){
-  // Nét kỹ thuật xám sạch (kiểu SketchUp): 3 mặt sáng dần, viền đen mảnh - KHÔNG vân gỗ.
+  // Nét kỹ thuật xám sạch (kiểu SketchUp): 3 mặt tương phản rõ, viền mỏng tinh tế.
   const {x,y,z,dx,dy,dz}=b,zt=z+dz;
   const P=(X,Y,Z)=>proj(X,Y,Z,s,ox,oy);
-  function face(pts3,fill){const pts=pts3.map(p=>P(p[0],p[1],p[2]));ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle='#2A2F33';ctx.lineWidth=1.1;ctx.lineJoin='round';ctx.stroke();return pts;}
-  // Chọn 2 mặt bên ĐANG QUAY VỀ PHÍA NGƯỜI XEM theo góc xoay (để không bị mất mặt khi xoay quá 90°).
+  function face(pts3,fill){
+    const pts=pts3.map(p=>P(p[0],p[1],p[2]));
+    ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q.X,q.Y):ctx.moveTo(q.X,q.Y));
+    ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+    ctx.strokeStyle='#545C62';ctx.lineWidth=0.55;ctx.lineJoin='round';ctx.stroke();
+    return pts;
+  }
   const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);
-  const yf=(c>=0)?y+dy:y;   // mặt vuông góc trục Y nhìn thấy (trải theo x,z)
-  const xf=(sn>=0)?x+dx:x;  // mặt vuông góc trục X nhìn thấy (trải theo y,z)
-  face([[x,yf,z],[x+dx,yf,z],[x+dx,yf,zt],[x,yf,zt]],'#C7CBCE');   // mặt theo Y (tối)
-  face([[xf,y,z],[xf,y+dy,z],[xf,y+dy,zt],[xf,y,zt]],'#D9DCDE');   // mặt theo X (vừa)
-  face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#F0F1F2');       // mặt trên (sáng)
+  const yf=(c>=0)?y+dy:y;
+  const xf=(sn>=0)?x+dx:x;
+  face([[x,yf,z],[x+dx,yf,z],[x+dx,yf,zt],[x,yf,zt]],'#A4ABB0');   // mặt Y (tối nhất)
+  face([[xf,y,z],[xf,y+dy,z],[xf,y+dy,zt],[xf,y,zt]],'#C0C5C8');   // mặt X (trung gian)
+  face([[x,y,zt],[x+dx,y,zt],[x+dx,y+dy,zt],[x,y+dy,zt]],'#ECEDF0'); // mặt trên (sáng)
 }
 /* CHÂN SUỐT KHOÉT HỐC VÒM - vẽ profile (x-z) đùn theo bề rộng strW */
 function archProf(t){return Math.min(1,Math.sin(Math.PI*t)*1.55);} // bump cạnh dốc, đỉnh phẳng
