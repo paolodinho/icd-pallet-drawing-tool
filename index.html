@@ -155,11 +155,11 @@
 
     <!-- STRINGER -->
     <div class="grp" data-eng="stringer">
-      <div class="gt">Chân suốt (chạy dọc chiều dài)</div>
+      <div class="gt" id="g-str-title">Chân suốt (chạy dọc chiều dài)</div>
       <div class="row">
-        <div><label>Số chân</label><input id="strN" type="number" value="3"></div>
-        <div><label>Rộng chân</label><input id="strW" type="number" value="100"></div>
-        <div><label>Cao chân</label><input id="strH" type="number" value="90"></div>
+        <div><label id="lbl-strN">Số chân</label><input id="strN" type="number" value="3"></div>
+        <div><label id="lbl-strW">Rộng chân</label><input id="strW" type="number" value="100"></div>
+        <div><label id="lbl-strH">Cao chân</label><input id="strH" type="number" value="90"></div>
       </div>
       <div class="chk"><input type="checkbox" id="notch" onchange="render()"><label style="margin:0">Khoét chân (2 hốc/chân → 4 chiều nâng)</label></div>
     </div>
@@ -377,6 +377,14 @@ function updateBotGroup(){
   const eng=$('engine').value, faces=parseInt($('faces').value);
   const hasBot = eng==='block' || (eng==='stringer' && faces===2);
   g.style.display = hasBot ? '' : 'none';
+  // Stringer 2 mặt: 3 thanh giữa là "Nan liên kết" (kẹp giữa 2 sàn), KHÔNG phải chân đứng -> đổi nhãn cho khớp phiếu.
+  if(eng==='stringer'){
+    const twoFace=faces===2;
+    if($('g-str-title'))$('g-str-title').textContent = twoFace ? 'Nan liên kết (dọc)' : 'Chân suốt (chạy dọc chiều dài)';
+    if($('lbl-strN'))$('lbl-strN').textContent = twoFace ? 'Số lượng' : 'Số chân';
+    if($('lbl-strW'))$('lbl-strW').textContent = twoFace ? 'Rộng' : 'Rộng chân';
+    if($('lbl-strH'))$('lbl-strH').textContent = twoFace ? 'Dày' : 'Cao chân';
+  }
 }
 
 /* ---------- MODEL BUILDERS ---------- */
@@ -460,7 +468,7 @@ function buildStringer(){
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
   if(bearer)cau.push([bearerN+' Giằng ngang đỡ nan',W+'x'+topW+'x'+topT+'mm']);
-  cau.push([strN+(notch?' Chân khoét':' Chân suốt'),L+'x'+strW+'x'+strH+'mm']);
+  cau.push([strN+(hasBot?' Nan liên kết':(notch?' Chân khoét':' Chân suốt')),L+'x'+strW+'x'+strH+'mm']);
   if(hasBot)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
