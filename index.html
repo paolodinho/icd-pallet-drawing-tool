@@ -183,6 +183,9 @@
         <div><label>Độ ẩm</label><input id="moist" value="≤ 18%"></div>
         <div><label>Xử lý</label><input id="treat" value="Sấy tự nhiên"></div>
       </div>
+      <div class="row">
+        <div><label>Màu sắc</label><input id="color" value="Gỗ"></div>
+      </div>
     </div>
 
     <button class="btn-primary" onclick="render()">Vẽ lại bản vẽ</button>
@@ -413,12 +416,12 @@ function buildBlock(){
   boxes.push(...deck(topRot,topN,topW,topT,zTop,L,W));
   const nCol=blkNW;
   const cau=[];
-  cau.push(['Nan mặt trên',topW+'x'+topT+'x'+(topRot?L:W)+'mm','('+topN+' nan)']);
-  cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+nCol+' nan)']);
-  cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
-  if(faces===2)cau.push(['Nan đáy (sàn mặt dưới)',botW+'x'+botT+'x'+(botRot?L:W)+'mm','('+botN+' nan)']);
-  else { cau.push(['Giằng đáy dọc (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' thanh)']);
-         cau.push(['Giằng đáy ngang (khóa chân)',botW+'x'+botT+'x'+W+'mm','('+blkNL+' thanh)']); }
+  cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
+  cau.push([nCol+' Nan liên kết',L+'x'+linkW+'x'+linkT+'mm']);
+  cau.push([(blkNL*blkNW)+' Chân cục',blkA+'x'+blkB+'x'+blkH+'mm']);
+  if(faces===2)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
+  else { cau.push([nCol+' Giằng đáy dọc',L+'x'+botW+'x'+botT+'mm']);
+         cau.push([blkNL+' Giằng đáy ngang',W+'x'+botW+'x'+botT+'mm']); }
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
     {a:[L,0,zTop],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
@@ -455,10 +458,10 @@ function buildStringer(){
   if(bearer)positions(bearerN,topW,L).forEach(x=>boxes.push({x,y:0,z:strTop,dx:topW,dy:W,dz:topT,kind:'board'}));
   boxes.push(...deck(topRot,topN,topW,topT,zDeck,L,W));
   const cau=[];
-  cau.push(['Nan mặt trên',topW+'x'+topT+'x'+(topRot?L:W)+'mm','('+topN+' nan)']);
-  if(bearer)cau.push(['Giằng ngang đỡ nan',topW+'x'+topT+'x'+W+'mm','('+bearerN+' thanh)']);
-  cau.push([notch?'Chân khoét (dọc)':'Chân suốt (dọc)',strW+'x'+strH+'x'+L+'mm','('+strN+' chân'+(notch?', khoét 2 hốc':'')+')']);
-  if(hasBot)cau.push(['Nan đáy (mặt dưới)',botW+'x'+botT+'x'+(botRot?L:W)+'mm','('+botN+' nan)']);
+  cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
+  if(bearer)cau.push([bearerN+' Giằng ngang đỡ nan',W+'x'+topW+'x'+topT+'mm']);
+  cau.push([strN+(notch?' Chân khoét':' Chân suốt'),L+'x'+strW+'x'+strH+'mm']);
+  if(hasBot)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
     {a:[L,0,zStr],b:[L,0,strTop],off:{x:34,y:0},label:strH+'',wit:1},
@@ -476,7 +479,7 @@ function buildCollar(){
     {x:0,y:0,z:0,dx:t,dy:W,dz:H,kind:'board'},
     {x:L-t,y:0,z:0,dx:t,dy:W,dz:H,kind:'board'},
   ];
-  const cau=[['Ván khung',t+'mm dày','(gỗ thông)'],['Chiều cao khung',H+'mm',''],['Bản lề','thép','(gập gọn được)']];
+  const cau=[['Ván khung',t+'mm dày (gỗ thông)'],['Chiều cao khung',H+'mm'],['Bản lề','thép (gập gọn được)']];
   return {L,W,Htot:H,boxes,cau,faces:1,collar:true};
 }
 
@@ -672,12 +675,12 @@ function render(){
   ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',RX,128);
   ctx.fillStyle='#FB7703';ctx.fillRect(RX,138,170,3);
   const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
-  if(!m.collar){specs.push(['Tải trọng động','~ '+$('dynLoad').value+' kg']);specs.push(['Tải trọng tĩnh','~ '+$('staLoad').value+' kg']);specs.push(['Số mặt sử dụng',m.faces+' mặt']);specs.push(['Độ ẩm',$('moist').value]);specs.push(['Xử lý',$('treat').value]);}
+  if(!m.collar){specs.push(['Tải trọng động','~ '+$('dynLoad').value+' kg']);specs.push(['Tải trọng tĩnh','~ '+$('staLoad').value+' kg']);specs.push(['Số mặt sử dụng',m.faces+' mặt']);specs.push(['Độ ẩm',$('moist').value]);specs.push(['Xử lý',$('treat').value]);specs.push(['Màu sắc',$('color').value]);}
   let ty=158;
   specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(RX,ty,RW,40);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],RX+12,ty+24);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],RX+178,ty+24);ty+=40;});
   ctx.strokeStyle='#E2E5E8';ctx.strokeRect(RX,158,RW,specs.length*40);
   ty+=34;ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('CẤU TẠO',RX,ty);ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty+10,90,3);ty+=40;
-  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',RX+18,ty+5);ctx.font='500 13px Arial';ctx.fillStyle='#6B7680';ctx.fillText(r[1]+'  '+r[2],RX+18,ty+24);ty+=46;});
+  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',RX+18,ty+5);ctx.font='500 13px Arial';ctx.fillStyle='#6B7680';ctx.fillText(r[1],RX+18,ty+24);ty+=46;});
   // ====== HÌNH CHIẾU 2D (hàng dưới) ======
   const y2=786;
   ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('HÌNH CHIẾU KỸ THUẬT (CÓ CỐT)',40,y2);
