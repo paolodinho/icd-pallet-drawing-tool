@@ -167,6 +167,18 @@
         <div><label>Rộng</label><input id="linkW" type="number" value="75" oninput="syncBlkSize();render()"></div>
         <div><label>Dày</label><input id="linkT" type="number" value="15"></div>
       </div>
+      <div class="row" id="link-opt-row" style="margin-top:6px">
+        <div>
+          <label>Vị trí nan gánh</label>
+          <select id="linkPos" onchange="render()">
+            <option value="tren">Trên cục (dưới nan mặt)</option>
+            <option value="duoi">Dưới cục (trên nan đáy)</option>
+          </select>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <label style="display:flex;align-items:center;gap:6px;margin:0;font-weight:500;cursor:pointer"><input type="checkbox" id="linkRot" onchange="render()" style="width:auto">Xoay ngang (chạy theo W)</label>
+        </div>
+      </div>
     </div>
     <div class="grp" data-eng="block">
       <div class="gt">Chân cục</div>
@@ -379,8 +391,8 @@ function deckDims(rot,N,bw,L,W,Htot){
 /* ---------- KIỂU DÁNG (cấu trúc) ---------- */
 const STYLES=[
  {id:'block-2mat',label:'Pallet 2 mặt 2 chiều - chân suốt (2 bên + giữa)',name:'PALLET GỖ 2 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:2,topW:90,topT:15,topN:8,strW:100,strH:95,strN:3,notch:false,botW:90,botT:15,botN:8,dyn:1500,sta:3000},
- {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
- {id:'block-2mat-cuc',label:'Pallet 2 mặt 4 chiều - chân cục (đố) kiểu EPAL',name:'PALLET GỖ 2 MẶT 4 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:22,topN:7,linkW:100,linkT:22,linkN:3,blkA:145,blkB:145,blkH:100,blkNL:3,blkNW:3,botW:100,botT:22,botN:3,dyn:1500,sta:4000,blkFixed:true,blkChamfer:15},
+ {id:'block-1mat',label:'Pallet 1 mặt 4 chiều - khóa chân (chân cục)',name:'PALLET GỖ 1 MẶT 4 CHIỀU NÂNG',engine:'block',faces:1,topW:90,topT:15,topN:8,linkW:90,linkT:15,linkN:3,linkRot:true,blkA:100,blkB:90,blkH:95,blkNL:3,blkNW:3,botW:90,botT:15,botN:3,dyn:1000,sta:2000},
+ {id:'block-2mat-cuc',label:'Pallet 2 mặt 4 chiều - chân cục (đố) kiểu EPAL',name:'PALLET GỖ 2 MẶT 4 CHIỀU NÂNG',engine:'block',faces:2,topW:100,topT:22,topN:7,linkW:100,linkT:22,linkN:3,blkA:145,blkB:145,blkH:78,blkNL:3,blkNW:3,botW:100,botT:22,botN:3,dyn:1500,sta:4000,blkFixed:true,blkChamfer:15,linkRot:true,linkN:3,linkW:100,linkT:22},
  {id:'stringer',label:'Pallet 1 mặt 2 chiều - chân suốt',name:'PALLET GỖ 1 MẶT 2 CHIỀU NÂNG',engine:'stringer',faces:1,topW:100,topT:18,topN:7,strW:100,strH:90,strN:3,notch:false,dyn:500,sta:1000},
  {id:'stringer-notch',label:'Pallet 1 mặt 4 chiều - khoét chân',name:'PALLET GỖ 1 MẶT 4 CHIỀU KHOÉT CHÂN',engine:'stringer',faces:1,topW:80,topT:15,topN:8,strW:100,strH:90,strN:3,notch:true,dyn:300,sta:600},
  {id:'collar',label:'Khung gỗ pallet (collar)',name:'KHUNG GỖ PALLET',engine:'collar',faces:1,colT:20,colH:195},
@@ -478,6 +490,8 @@ function applyStyle(){
   }
   if($('topRot'))$('topRot').checked=!!p.topRot;
   if($('botRot'))$('botRot').checked=!!p.botRot;
+  if($('linkRot'))$('linkRot').checked=!!p.linkRot;   // nan gánh: hướng VUÔNG GÓC nan trên (mới nhìn thấy)
+  if($('linkPos'))$('linkPos').value=p.linkPos||'tren';
   setBotRotLock(); updateBotGroup();
   if(p.dyn)set('dynLoad',p.dyn); if(p.sta)set('staLoad',p.sta);
   applySize(true); // áp khổ đang chọn lên kiểu dáng mới
@@ -530,10 +544,11 @@ function updateBotGroup(){
   const gl=$('g-link');
   if(gl){
     const topRot=$('topRot')&&$('topRot').checked;
-    // block 2 mặt: nan trên đặt thẳng trên chân, KHÔNG có lớp nan liên kết -> ẩn nhóm. Chỉ block 1 mặt (khóa chân) mới có.
-    const showLink = (eng==='block' && faces===1) || (eng==='stringer' && topRot);
+    // block: LUÔN có nan liên kết (nan gánh). stringer: chỉ khi đổi chiều nan trên (giằng ngang đỡ nan).
+    const showLink = (eng==='block') || (eng==='stringer' && topRot);
     gl.style.display = showLink ? '' : 'none';
-    if($('g-link-title'))$('g-link-title').textContent = (eng==='stringer') ? 'Giằng ngang đỡ nan trên' : 'Nan liên kết (dọc)';
+    if($('g-link-title'))$('g-link-title').textContent = (eng==='stringer') ? 'Giằng ngang đỡ nan trên' : 'Nan liên kết (nan gánh)';
+    const lr=$('link-opt-row'); if(lr)lr.style.display=(eng==='block')?'':'none';   // dọc/ngang + trên/dưới chỉ áp cho block
   }
 }
 
@@ -553,33 +568,35 @@ function buildBlock(){
   const botW=num('botW'),botT=num('botT'),botN=num('botN');
   const faces=parseInt($('faces').value);
   const topRot=$('topRot')&&$('topRot').checked, botRot=$('botRot')&&$('botRot').checked;
-  // 2 mặt (EPAL): nan mặt trên đặt THẲNG trên chân (như thực tế) -> KHÔNG có lớp nan liên kết chèn giữa, tổng cao = botT+blkH+topT.
-  // 1 mặt (khóa chân): giữ lớp nan liên kết (boards dọc tì lên chân, dưới nan mặt).
-  const hasLink = (faces===1);
-  const zBlock=botT, zLink=zBlock+blkH, zTop=hasLink?(zLink+linkT):zLink, Htot=zTop+topT;
+  // NAN LIÊN KẾT (nan gánh) - LUÔN có với pallet chân cục (gánh tải từ nan mặt xuống chân, như EPAL thật).
+  // Tùy chọn: hướng dọc(L)/ngang(W) qua linkRot; vị trí trên cục (dưới nan mặt) hoặc dưới cục (trên nan đáy) qua linkPos.
+  const linkRot=$('linkRot')&&$('linkRot').checked;             // false=dọc theo L | true=ngang theo W
+  const linkPos=($('linkPos')&&$('linkPos').value)||'tren';     // 'tren' | 'duoi'
+  const linkOnTop=(linkPos!=='duoi');
+  let zLink, zBlock;
+  if(linkOnTop){ zBlock=botT; zLink=botT+blkH; } else { zLink=botT; zBlock=botT+linkT; }
+  const zTop=botT+blkH+linkT, Htot=zTop+topT;
   const boxes=[];
-  // Tâm các CỘT chân (theo chiều rộng W). Mỗi cột chân = 1 nan liên kết trên + 1 nan đáy dưới, CĂN THẲNG cột.
-  const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân
-  const xs=positions(blkNL,blkA,L);                 // vị trí chân theo chiều dài
+  const colY=positions(blkNW,blkB,W);              // vị trí từng cột chân (theo W)
+  const xs=positions(blkNL,blkA,L);                 // vị trí chân theo chiều dài (theo L)
   // NAN ĐÁY:
   //  - 2 mặt: sàn đáy đầy đủ (botN thanh), hướng theo botRot
-  //  - 1 mặt: thanh DÀI chạy suốt L, 1 thanh / CỘT chân, đỡ nguyên cột 3 chân (khớp ảnh thật)
+  //  - 1 mặt: giằng đáy 2 chiều (dọc + ngang) khóa chân
   if(faces===2){ boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); }
   else {
-    // KHÓA CHÂN = giằng đáy CẢ 2 CHIỀU (mới đúng 4 chiều): thanh dọc L dưới mỗi CỘT + thanh ngang W dưới mỗi HÀNG chân.
-    colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'}));   // giằng dọc (đỡ chân theo L)
-    xs.forEach(bx=>boxes.push({x:bx+blkA/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'}));        // giằng ngang (khóa chân theo W)
+    colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'}));
+    xs.forEach(bx=>boxes.push({x:bx+blkA/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'}));
   }
-  // CHÂN CỤC
+  // CHÂN CỤC (số lượng = blkNL x blkNW, tùy chỉnh được)
   xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block',chamfer:blkChamfer})));
-  // NAN LIÊN KẾT (chỉ 1 mặt khóa chân): 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
-  if(hasLink) colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-linkW/2,z:zLink,dx:L,dy:linkW,dz:linkT,kind:'board'}));
+  // NAN LIÊN KẾT (nan gánh): rải đều linkN thanh theo hướng linkRot
+  boxes.push(...deck(linkRot,linkN,linkW,linkT,zLink,L,W));
   // NAN MẶT TRÊN: hướng theo topRot
   boxes.push(...deck(topRot,topN,topW,topT,zTop,L,W));
   const nCol=blkNW;
   const cau=[];
   cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
-  if(hasLink) cau.push([nCol+' Nan liên kết',L+'x'+linkW+'x'+linkT+'mm']);
+  cau.push([linkN+' Nan liên kết (nan gánh)',(linkRot?W:L)+'x'+linkW+'x'+linkT+'mm']);
   cau.push([(blkNL*blkNW)+' Chân cục',blkA+'x'+blkB+'x'+blkH+'mm']);
   if(faces===2)cau.push([botN+' Nan mặt dưới',(botRot?L:W)+'x'+botW+'x'+botT+'mm']);
   else { cau.push([nCol+' Giằng đáy dọc',L+'x'+botW+'x'+botT+'mm']);
@@ -587,6 +604,7 @@ function buildBlock(){
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
     {a:[L,0,zTop],b:[L,0,Htot],off:{x:34,y:0},label:topT+'',wit:1},
+    {a:[L,0,zLink],b:[L,0,zLink+linkT],off:{x:34,y:0},label:linkT+'',wit:1},
     {a:[L,0,zBlock],b:[L,0,zBlock+blkH],off:{x:34,y:0},label:blkH+'',wit:1},
     {a:[L,0,0],b:[L,0,botT],off:{x:34,y:0},label:botT+'',wit:1},
   ];
@@ -1097,7 +1115,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
 /* ===== LƯU / TẢI MẪU ===== */
 const API='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot',
-  'linkN','linkW','linkT','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
+  'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
   'botN','botW','botT','botRot','strN','strW','strH','notch','colT','colH','dynLoad','staLoad','moist','treat','color'];
 function getFormState(){
   const s={};
