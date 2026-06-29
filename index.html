@@ -197,12 +197,15 @@
   <div class="panel out">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h3 style="margin:2px 0 12px">Bản vẽ kết quả</h3>
-      <div style="display:flex;gap:8px">
-        <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="resetView()">Xoay về mặc định</button>
-        <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 14px;font-size:13px" onclick="toggleFull()">Xem toàn màn hình</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(0)">Góc chuẩn</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(1)">Chếch phải</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(2)">Chếch trái</button>
+        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(3)">Nhìn cao</button>
+        <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="toggleFull()">Toàn màn hình</button>
       </div>
     </div>
-    <div class="hint" style="margin:0 0 8px">Mẹo: kéo chuột trên hình 3D để xoay - <b>kéo ngang</b> = xoay quanh trục đứng, <b>kéo dọc</b> = nghiêng lên/xuống (mỗi lần kéo chỉ theo 1 trục). Góc đang xem chính là góc sẽ tải xuống khi bấm "Tải ảnh PNG".</div>
+    <div class="hint" style="margin:0 0 8px">Chọn 1 trong các <b>góc nhìn chuẩn</b> ở trên (đường gióng đã được canh sạch cho từng góc). Góc đang chọn chính là góc sẽ tải xuống khi bấm "Tải ảnh PNG".</div>
     <div id="canvasWrap"><canvas id="sheet" width="1400" height="980"></canvas></div>
   </div>
 </div>
@@ -578,8 +581,23 @@ function drawPalletInto(ctx,area,m){
   [pe,pf].forEach(p=>{ctx.beginPath();ctx.arc(p.X,p.Y,2.5,0,7);ctx.fill();});
   ctx.save();ctx.translate((pe.X+pf.X)/2+16,(pe.Y+pf.Y)/2);ctx.rotate(-Math.PI/2);ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(Math.round(H)+' mm',0,0);ctx.fillStyle='#27343A';ctx.fillText(Math.round(H)+' mm',0,0);ctx.restore();
   // cote chi tiết (rộng nan, khe hở, độ dày, cao chân...)
-  // 3D HERO chỉ giữ cote tổng Dài/Rộng/Cao cho SẠCH. Cote chi tiết (rộng nan, khe hở, độ dày từng lớp)
-  // đặt ở HÌNH CHIẾU BẰNG + HÌNH CHIẾU CẠNH bên dưới (đúng chuẩn bản vẽ - không nhồi cote chi tiết lên phối cảnh).
+  const ctr=proj(L/2,W/2,H/2,s,ox,oy);   // tâm hình chiếu -> để đẩy cote RA NGOÀI
+  (m.adims||[]).forEach(d=>{
+    const q1=proj(d.a[0],d.a[1],d.a[2],s,ox,oy),q2=proj(d.b[0],d.b[1],d.b[2],s,ox,oy);
+    const ex=q2.X-q1.X,ey=q2.Y-q1.Y,len=Math.hypot(ex,ey)||1;
+    let nx=-ey/len,ny=ex/len;
+    const mx=(q1.X+q2.X)/2,my=(q1.Y+q2.Y)/2;
+    if((mx-ctr.X)*nx+(my-ctr.Y)*ny<0){nx=-nx;ny=-ny;}
+    const offD=Math.hypot(d.off.x,d.off.y)||22, vx=nx*offD,vy=ny*offD;
+    const e1={X:q1.X+vx,Y:q1.Y+vy},e2={X:q2.X+vx,Y:q2.Y+vy};
+    if(d.wit){
+      ctx.save();ctx.strokeStyle='#AEB4B9';ctx.lineWidth=0.8;
+      [[q1,e1],[q2,e2]].forEach(([a,b])=>{const dgx=b.X-a.X,dgy=b.Y-a.Y,l2=Math.hypot(dgx,dgy)||1;
+        ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(b.X+dgx/l2*3,b.Y+dgy/l2*3);ctx.stroke();});
+      ctx.restore();
+    }
+    dimLine(ctx,e1,e2,d.label,13);
+  });
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
@@ -799,29 +817,18 @@ function onHeightInput(){
   set(id, Math.max(20, Math.round(H - fixed)));        // lớp giữa = H - phần cố định
   render();
 }
-function resetView(){VIEW={yaw:VIEW_DEFAULT.yaw,elev:VIEW_DEFAULT.elev};render();}
-// ====== KÉO CHUỘT / CHẠM ĐỂ XOAY HÌNH 3D ======
-(function(){
-  const cv=$('sheet'); let drag=null,raf=0;
-  function reqRender(){if(raf)return;raf=requestAnimationFrame(()=>{raf=0;render();});}
-  function pt(e){return e.touches&&e.touches[0]?e.touches[0]:e;}
-  function logical(e){const r=cv.getBoundingClientRect(),p=pt(e);return {x:(p.clientX-r.left)*1500/r.width, y:(p.clientY-r.top)*1280/r.height};}
-  function in3D(p){return p.x>=32&&p.x<=1036&&p.y>=150&&p.y<=752;}   // vùng ô phối cảnh 3D
-  function down(e){const p=pt(e);if(!in3D(logical(e)))return;drag={x:p.clientX,y:p.clientY,yaw:VIEW.yaw,elev:VIEW.elev,axis:null};cv.style.cursor='grabbing';if(e.cancelable)e.preventDefault();}
-  function move(e){
-    if(!drag){if(e.type==='mousemove')cv.style.cursor=in3D(logical(e))?'grab':'default';return;}
-    const p=pt(e),dx=p.clientX-drag.x,dy=p.clientY-drag.y;
-    // KHOÁ 1 TRỤC mỗi lần kéo: ngang -> xoay quanh trục đứng; dọc -> nghiêng. Không trộn để tránh cảm giác méo.
-    if(!drag.axis && (Math.abs(dx)>5 || Math.abs(dy)>5)) drag.axis = Math.abs(dx)>=Math.abs(dy) ? 'yaw' : 'elev';
-    if(drag.axis==='yaw') VIEW.yaw = drag.yaw + dx*0.01;
-    else if(drag.axis==='elev') VIEW.elev = Math.max(ELEV_MIN,Math.min(ELEV_MAX, drag.elev + dy*0.004));
-    reqRender();if(e.cancelable)e.preventDefault();
-  }
-  function up(){if(drag){drag=null;cv.style.cursor='grab';}}
-  cv.addEventListener('mousedown',down);window.addEventListener('mousemove',move);window.addEventListener('mouseup',up);
-  cv.addEventListener('touchstart',down,{passive:false});cv.addEventListener('touchmove',move,{passive:false});window.addEventListener('touchend',up);
-})();
-buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();
+// ====== CÁC GÓC NHÌN CHUẨN (cố định) - đường gióng đã canh sạch cho từng góc, không xoay tự do ======
+const VIEWS=[
+  {yaw:Math.PI/4, elev:0.62},   // 0 Góc chuẩn (iso 45°)
+  {yaw:0.50,      elev:0.60},   // 1 Chếch phải (thấy mặt đầu phải rõ hơn)
+  {yaw:1.07,      elev:0.60},   // 2 Chếch trái
+  {yaw:Math.PI/4, elev:0.95},   // 3 Nhìn cao (gần từ trên xuống)
+];
+let curView=0;
+function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.yaw,elev:v.elev};
+  document.querySelectorAll('.vbtn').forEach((b,k)=>{b.style.borderColor=(k===curView)?'#FB7703':'';b.style.color=(k===curView)?'#FB7703':'';});
+  render();}
+buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();setView(0);
 if(!UNLOCKED){openEntryModal();}   // vào trang: hiện popup chọn cách dùng
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
