@@ -370,7 +370,11 @@ function buildBlock(){
   //  - 2 mặt: sàn đáy đầy đủ (botN thanh), hướng theo botRot
   //  - 1 mặt: thanh DÀI chạy suốt L, 1 thanh / CỘT chân, đỡ nguyên cột 3 chân (khớp ảnh thật)
   if(faces===2){ boxes.push(...deck(botRot,botN,botW,botT,0,L,W)); }
-  else { colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'})); }
+  else {
+    // KHÓA CHÂN = giằng đáy CẢ 2 CHIỀU (mới đúng 4 chiều): thanh dọc L dưới mỗi CỘT + thanh ngang W dưới mỗi HÀNG chân.
+    colY.forEach(cy=>boxes.push({x:0,y:cy+blkB/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'}));   // giằng dọc (đỡ chân theo L)
+    xs.forEach(bx=>boxes.push({x:bx+blkA/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'}));        // giằng ngang (khóa chân theo W)
+  }
   // CHÂN CỤC
   xs.forEach(x=>colY.forEach(cy=>boxes.push({x,y:cy,z:zBlock,dx:blkA,dy:blkB,dz:blkH,kind:'block'})));
   // NAN LIÊN KẾT: 1 thanh / cột chân, căn giữa cột -> chân nào cũng có nan liên kết đè lên
@@ -383,7 +387,8 @@ function buildBlock(){
   cau.push(['Nan liên kết mặt',linkW+'x'+linkT+'x'+L+'mm','('+nCol+' nan)']);
   cau.push(['Chân cục',blkA+'x'+blkB+'x'+blkH+'mm','('+(blkNL*blkNW)+' cục)']);
   if(faces===2)cau.push(['Nan đáy (sàn mặt dưới)',botW+'x'+botT+'x'+(botRot?L:W)+'mm','('+botN+' nan)']);
-  else cau.push(['Nan đáy (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' nan)']);
+  else { cau.push(['Giằng đáy dọc (đỡ chân)',botW+'x'+botT+'x'+L+'mm','('+nCol+' thanh)']);
+         cau.push(['Giằng đáy ngang (khóa chân)',botW+'x'+botT+'x'+W+'mm','('+blkNL+' thanh)']); }
   const adims=[
     ...deckDims(topRot,topN,topW,L,W,Htot),
     {a:[L,0,zTop],b:[L,0,Htot],off:{x:30,y:-4},label:topT+''},
