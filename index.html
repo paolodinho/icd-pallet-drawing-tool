@@ -247,9 +247,11 @@
 <script src="assets/logo.js"></script>
 <script>
 const A=Math.PI/6,COS=Math.cos(A),SIN=0.40; // SIN thấp hơn 0.5 = camera thấp hơn -> lộ rõ mặt trước + nan đáy dưới chân
-// Góc nhìn 3D có thể XOAY bằng chuột/kéo. yaw = xoay quanh trục đứng (360°); pitch = độ nghiêng camera (cao/thấp).
-const VIEW_DEFAULT={yaw:0,pitch:0.40};
-let VIEW={yaw:0,pitch:0.40};
+// Góc nhìn 3D XOAY kiểu BÀN XOAY (turntable): yaw = xoay quanh trục đứng (360°); pitch = độ nén chiều sâu (camera cao/thấp).
+// Mặc định yaw=45°, pitch=0.566 -> TRÙNG KHỚP hình iso cũ ((x-y)*0.866, (x+y)*0.40). HX giữ tỉ lệ ngang chuẩn.
+const HX=1.2247;
+const VIEW_DEFAULT={yaw:Math.PI/4,pitch:0.566};
+let VIEW={yaw:Math.PI/4,pitch:0.566};
 const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();};LOGO.src=window.LOGO_DATA;
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -474,12 +476,13 @@ function buildCollar(){
 
 /* ---------- ISO RENDER ---------- */
 function proj(x,y,z,s,ox,oy){
-  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);   // xoay quanh trục đứng Z trước
-  const xr=x*c-y*sn, yr=x*sn+y*c;
-  return {X:ox+(xr-yr)*COS*s, Y:oy+(xr+yr)*VIEW.pitch*s - z*s};
+  // BÀN XOAY: xoay (x,y) quanh trục đứng theo yaw -> chiếu thẳng (ngang giữ tỉ lệ HX, sâu nén theo pitch), z luôn dựng đứng.
+  const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);
+  const a=x*c - y*sn, d=x*sn + y*c;
+  return {X:ox+a*HX*s, Y:oy+d*VIEW.pitch*s - z*s};
 }
-// độ sâu (đã xoay) của TÂM box -> sắp xếp vẽ xa trước, gần sau theo góc nhìn hiện tại
-function boxDepth(b){const cx=b.x+b.dx/2,cy=b.y+b.dy/2,c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw);return (cx*c-cy*sn)+(cx*sn+cy*c);}
+// độ sâu vào màn (trục d đã xoay) của TÂM box -> vẽ xa trước, gần sau
+function boxDepth(b){const cx=b.x+b.dx/2,cy=b.y+b.dy/2;return cx*Math.sin(VIEW.yaw)+cy*Math.cos(VIEW.yaw);}
 function drawBox(ctx,b,s,ox,oy){
   // Nét kỹ thuật xám sạch (kiểu SketchUp): 3 mặt sáng dần, viền đen mảnh - KHÔNG vân gỗ.
   const {x,y,z,dx,dy,dz}=b,zt=z+dz;
