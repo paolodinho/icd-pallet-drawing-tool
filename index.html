@@ -20,6 +20,9 @@
   .grp{margin-bottom:13px;padding-bottom:11px;border-bottom:1px dashed var(--line)}
   .grp:last-child{border-bottom:0}
   .grp .gt{font-size:12px;font-weight:700;color:var(--orange-dark);margin-bottom:7px;text-transform:uppercase}
+  .sec{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;color:var(--dark);letter-spacing:.03em;text-transform:uppercase;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--orange)}
+  .sec:first-of-type{margin-top:2px}
+  .sec b{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--orange);color:#fff;border-radius:50%;font-size:11px;font-weight:800;flex:0 0 18px}
   label{display:block;font-size:12px;color:var(--muted);margin:6px 0 2px}
   input,select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px;color:var(--dark);background:#fff}
   .row{display:flex;gap:8px}.row>div{flex:1}
@@ -120,6 +123,7 @@
       <button type="button" class="link-btn" onclick="openEntryModal()">Nhập mật khẩu</button>
     </div>
 
+    <div class="sec"><b>1</b> Chọn mẫu pallet</div>
     <div class="grp">
       <div class="gt">Kiểu dáng</div>
       <select id="style" onchange="applyStyle()"></select>
@@ -128,25 +132,24 @@
       <select id="engine" style="display:none"><option value="block"></option><option value="stringer"></option><option value="collar"></option></select>
     </div>
 
+    <div class="sec"><b>2</b> Tên &amp; kích thước</div>
     <div class="grp">
-      <div class="gt">Thông tin chung</div>
       <label>Tên / model (hiện trên bản vẽ)</label>
       <input id="title" value="PALLET GỖ KEO 1219x1016x127mm">
-      <div class="row">
-        <div><label>Chất liệu</label><input id="material" value="Gỗ keo"></div>
-        <div id="f-faces"><label>Số mặt (theo kiểu dáng)</label>
-          <select id="faces" disabled style="background:#F4F5F7;color:#6B7680"><option value="2">2 mặt</option><option value="1">1 mặt</option></select>
-        </div>
-      </div>
       <div class="row">
         <div><label>Dài L (mm)</label><input id="L" type="number" value="1219"></div>
         <div><label>Rộng W (mm)</label><input id="W" type="number" value="1016"></div>
         <div><label>Cao H (mm)</label><input id="Hdisp" type="number" value=""></div>
       </div>
-      <div style="margin-top:4px">
-        <button type="button" onclick="swapLW()" style="font-size:12px;padding:4px 12px;background:#EFF1F3;border:1px solid #C8CDD2;border-radius:5px;cursor:pointer;color:#444">⇄ Xoay 90° (đổi L↔W)</button>
+      <div class="row" style="margin-top:6px;align-items:flex-end">
+        <div id="f-faces"><label>Số mặt (theo kiểu dáng)</label>
+          <select id="faces" disabled style="background:#F4F5F7;color:#6B7680"><option value="2">2 mặt</option><option value="1">1 mặt</option></select>
+        </div>
+        <div><button type="button" onclick="swapLW()" style="width:100%;font-size:12px;padding:8px 10px;background:#EFF1F3;border:1px solid #C8CDD2;border-radius:6px;cursor:pointer;color:#444;white-space:nowrap">⇄ Xoay 90° (đổi L↔W)</button></div>
       </div>
     </div>
+
+    <div class="sec"><b>3</b> Cấu tạo <span style="font-weight:600;text-transform:none;color:var(--muted)">(từ trên xuống)</span></div>
 
     <!-- TOP DECK (block + stringer) -->
     <div class="grp" data-eng="block stringer">
@@ -195,7 +198,7 @@
       </div>
     </div>
     <div class="grp" data-eng="block">
-      <div class="gt">Chân cục</div>
+      <div class="gt">Chân (cục đố)</div>
       <div class="row">
         <div><label>Số cục theo dài</label><input id="blkNL" type="number" value="3"></div>
         <div><label>Số cục theo rộng</label><input id="blkNW" type="number" value="3"></div>
@@ -207,23 +210,8 @@
         <div><label>Cao h</label><input id="blkH" type="number" value="80"></div>
       </div>
     </div>
-    <div class="grp" data-eng="block stringer collar">
-      <div class="gt">Vát cạnh góc</div>
-      <div class="row">
-        <div><label>Vát cạnh góc (mm) <span style="color:#aaa;font-size:10px">0 = không vát. Cắt 45° cạnh đứng 4 góc, xuyên mọi lớp (kiểu EPAL)</span></label><input id="blkChamfer" type="number" value="0" min="0" oninput="render()"></div>
-      </div>
-    </div>
-    <div class="grp" id="g-bot" data-eng="block stringer">
-      <div class="gt">Nan mặt dưới</div>
-      <div class="row">
-        <div><label>Số lượng</label><input id="botN" type="number" value="3"></div>
-        <div><label>Rộng</label><input id="botW" type="number" value="75" oninput="syncBlkSize();render()"></div>
-        <div><label>Dày</label><input id="botT" type="number" value="15"></div>
-      </div>
-      <div class="chk"><input type="checkbox" id="botRot" onchange="render()"><label style="margin:0">Đổi chiều nan đáy (xoay 90&deg; - chạy theo chiều dài L)</label></div>
-    </div>
 
-    <!-- STRINGER -->
+    <!-- CHÂN SUỐT (stringer) - đặt cùng vị trí 'chân' với chân cục để đúng thứ tự lớp -->
     <div class="grp" data-eng="stringer">
       <div class="gt" id="g-str-title">Chân suốt (chạy dọc chiều dài)</div>
       <div class="row">
@@ -241,7 +229,18 @@
       </div>
     </div>
 
-    <!-- COLLAR -->
+    <!-- NAN MẶT DƯỚI -->
+    <div class="grp" id="g-bot" data-eng="block stringer">
+      <div class="gt">Nan mặt dưới</div>
+      <div class="row">
+        <div><label>Số lượng</label><input id="botN" type="number" value="3"></div>
+        <div><label>Rộng</label><input id="botW" type="number" value="75" oninput="syncBlkSize();render()"></div>
+        <div><label>Dày</label><input id="botT" type="number" value="15"></div>
+      </div>
+      <div class="chk"><input type="checkbox" id="botRot" onchange="render()"><label style="margin:0">Đổi chiều nan đáy (xoay 90&deg; - chạy theo chiều dài L)</label></div>
+    </div>
+
+    <!-- KHUNG GỖ (collar) -->
     <div class="grp" data-eng="collar">
       <div class="gt">Khung gỗ</div>
       <div class="row">
@@ -250,8 +249,21 @@
       </div>
     </div>
 
-    <div class="grp" data-eng="block stringer">
-      <div class="gt">Thông số bảng (tuỳ chọn)</div>
+    <div class="sec"><b>4</b> Tùy chỉnh thêm</div>
+    <div class="grp" data-eng="block stringer collar">
+      <div class="gt">Vát cạnh góc</div>
+      <div class="row">
+        <div><label>Vát cạnh góc (mm) <span style="color:#aaa;font-size:10px">0 = không vát. Cắt 45° cạnh đứng 4 góc, xuyên mọi lớp (kiểu EPAL)</span></label><input id="blkChamfer" type="number" value="0" min="0" oninput="render()"></div>
+      </div>
+    </div>
+
+    <div class="sec"><b>5</b> Thông số &amp; ghi chú <span style="font-weight:600;text-transform:none;color:var(--muted)">(hiện trên bản vẽ)</span></div>
+    <div class="grp" data-eng="block stringer collar">
+      <div class="gt">Thông số (tuỳ chọn)</div>
+      <div class="row">
+        <div><label>Chất liệu</label><input id="material" value="Gỗ keo"></div>
+        <div><label>Màu sắc</label><input id="color" value="Gỗ"></div>
+      </div>
       <div class="row">
         <div><label>Tải động (kg)</label><input id="dynLoad" value="1500"></div>
         <div><label>Tải tĩnh (kg)</label><input id="staLoad" value="2000"></div>
@@ -259,9 +271,6 @@
       <div class="row">
         <div><label>Độ ẩm</label><input id="moist" value="≤ 18%"></div>
         <div><label>Xử lý</label><input id="treat" value="Sấy tự nhiên"></div>
-      </div>
-      <div class="row">
-        <div><label>Màu sắc</label><input id="color" value="Gỗ"></div>
       </div>
       <div class="row">
         <div style="flex:2">
@@ -290,6 +299,7 @@
     </div>
 
     <!-- LƯU MẪU -->
+    <div class="sec"><b>6</b> Lưu &amp; tải mẫu</div>
     <div class="saved-section">
       <div class="gt">Mẫu đã lưu</div>
       <div class="save-row">
