@@ -954,6 +954,18 @@ function draw2DSide(ctx,area,m){
     if(xs.length>=2)hDim(ctx,X(xs[0]+bw),X(xs[1]),yb,Math.round(xs[1]-(xs[0]+bw))+'');
     if(xs[0]>0)hDim(ctx,X(0),X(xs[0]),yb,Math.round(xs[0])+'');
   }
+  // cote HỐC KHOÉT CHÂN (khoét chân): rộng hốc + vị trí + chiều sâu - đúng chuẩn bản vẽ gửi xưởng
+  const nb=m.boxes.find(b=>b.kind==='notch');
+  if(nb && nb.notches && nb.notches.length){
+    const ns=[...nb.notches].sort((a,b)=>a.cx-b.cx), z0=nb.z, yb=Y(0)+10;
+    let prev=0;
+    ns.forEach(n=>{ const l=n.cx-n.hw, r=n.cx+n.hw;
+      if(l-prev>2)hDim(ctx,X(prev),X(l),yb,Math.round(l-prev)+'');   // mép/chân tới hốc
+      hDim(ctx,X(l),X(r),yb,Math.round(r-l)+'');                      // RỘNG hốc
+      prev=r; });
+    if(L-prev>2)hDim(ctx,X(prev),X(L),yb,Math.round(L-prev)+'');      // hốc cuối tới mép
+    vDim(ctx,Y(z0),Y(z0+ns[0].nh),X(ns[0].cx),Math.round(ns[0].nh)+'');  // CAO hốc (chiều sâu), đặt trong lòng hốc
+  }
   // độ dày từng lớp bên phải (theo các mức z duy nhất)
   const zset=[...new Set(m.boxes.flatMap(b=>[Math.round(b.z),Math.round(b.z+b.dz)]))].sort((a,b)=>a-b);
   const xr=X(L)+22;
