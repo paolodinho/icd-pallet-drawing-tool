@@ -869,7 +869,7 @@ let RENDER_DPR=2;   // 2x cho màn hình; tải ảnh tạm nâng lên 4x cho n�
 function render(){
   const m=buildModel(),cv=$('sheet'),DPR=RENDER_DPR;
   if($('Hdisp')&&document.activeElement!==$('Hdisp'))$('Hdisp').value=Math.round(m.Htot);   // đồng bộ H (không ghi đè khi đang gõ)
-  const Wd=1500,Hd=1280;
+  const Wd=1500,Hd=1720;
   cv.width=Wd*DPR;cv.height=Hd*DPR;cv.style.aspectRatio=Wd+'/'+Hd;
   const ctx=cv.getContext('2d');ctx.scale(DPR,DPR);
   ctx.clearRect(0,0,Wd,Hd);ctx.fillStyle='#fff';ctx.fillRect(0,0,Wd,Hd);
@@ -882,17 +882,27 @@ function render(){
   ctx.font='500 15px Arial';ctx.fillStyle='#FB7703';
   const tag=m.collar?'Khung gỗ (collar)':('Chất liệu: '+$('material').value+'   •   '+(m.faces===2?'Pallet 2 mặt':'Pallet 1 mặt'));
   ctx.fillText(tag,Wd-40,72);
-  // ====== HÌNH 3D HERO (to nhất) ======
-  ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT - PHỐI CẢNH 3D',40,128);
-  ctx.fillStyle='#FB7703';ctx.fillRect(40,138,280,3);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,150,1004,602,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  // ====== HÌNH 3D HERO — TO, TOÀN CHIỀU NGANG (trên cùng) ======
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT - PHỐI CẢNH 3D',40,126);
+  ctx.fillStyle='#FB7703';ctx.fillRect(40,136,300,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,150,1436,640,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
   viewLabel(ctx,44,172,'Phối cảnh 3D');
-  drawPalletInto(ctx,{x:36,y:160,w:996,h:586},m);
-  // ====== THÔNG SỐ + CẤU TẠO (cột phải) ======
-  const RX=1062,RW=406;
+  drawPalletInto(ctx,{x:40,y:160,w:1420,h:620},m);
+  // ====== HÌNH CHIẾU KỸ THUẬT 2D (hàng giữa) ======
+  const y2=822;
+  ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('HÌNH CHIẾU KỸ THUẬT (CÓ CỐT)',40,y2);
+  ctx.fillStyle='#FB7703';ctx.fillRect(40,y2+10,270,3);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,y2+24,470,392,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  viewLabel(ctx,44,y2+46,'Hình chiếu bằng (nhìn từ trên)');
+  draw2DTop(ctx,{x:40,y:y2+54,w:454,h:356},m);
+  ctx.fillStyle='#FAFBFC';roundRect(ctx,522,y2+24,946,392,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
+  viewLabel(ctx,534,y2+46,'Hình chiếu cạnh - cắt lớp (theo chiều dài)');
+  draw2DSide(ctx,{x:532,y:y2+54,w:926,h:356},m);
+  // ====== THÔNG SỐ SẢN PHẨM + CẤU TẠO (hàng dưới cùng) ======
+  const y3=1280, SX=32, SW=700, CX=760;
   ctx.textAlign='left';ctx.textBaseline='alphabetic';
-  ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',RX,128);
-  ctx.fillStyle='#FB7703';ctx.fillRect(RX,138,170,3);
+  ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('THÔNG SỐ SẢN PHẨM',SX,y3);
+  ctx.fillStyle='#FB7703';ctx.fillRect(SX,y3+10,190,3);
   const specs=[['Kích thước',m.L+' x '+m.W+' x '+Math.round(m.Htot)+' mm'],['Nguyên liệu',$('material').value]];
   if(!m.collar){
     specs.push(['Tải trọng động','~ '+$('dynLoad').value+' kg']);
@@ -910,21 +920,13 @@ function render(){
       specs.push(['ISPM 15',ispmMap[$('ispmTreat').value]||$('ispmTreat').value]);
     }
   }
-  let ty=158;
-  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(RX,ty,RW,40);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],RX+12,ty+24);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],RX+178,ty+24);ty+=40;});
-  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(RX,158,RW,specs.length*40);
-  ty+=34;ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('CẤU TẠO',RX,ty);ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty+10,90,3);ty+=40;
-  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(RX,ty-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',RX+18,ty+5);ctx.font='500 13px Arial';ctx.fillStyle='#6B7680';ctx.fillText(r[1],RX+18,ty+24);ty+=46;});
-  // ====== HÌNH CHIẾU 2D (hàng dưới) ======
-  const y2=786;
-  ctx.fillStyle='#27343A';ctx.font='700 16px Arial';ctx.fillText('HÌNH CHIẾU KỸ THUẬT (CÓ CỐT)',40,y2);
-  ctx.fillStyle='#FB7703';ctx.fillRect(40,y2+10,250,3);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,32,y2+24,470,396,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  viewLabel(ctx,44,y2+46,'Hình chiếu bằng (nhìn từ trên)');
-  draw2DTop(ctx,{x:40,y:y2+54,w:454,h:360},m);
-  ctx.fillStyle='#FAFBFC';roundRect(ctx,522,y2+24,946,396,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  viewLabel(ctx,534,y2+46,'Hình chiếu cạnh - cắt lớp (theo chiều dài)');
-  draw2DSide(ctx,{x:532,y:y2+54,w:926,h:360},m);
+  let ty=y3+30;
+  specs.forEach((r,i)=>{ctx.fillStyle=i%2?'#F4F6F7':'#fff';ctx.fillRect(SX,ty,SW,38);ctx.fillStyle='#6B7680';ctx.font='500 14px Arial';ctx.textAlign='left';ctx.fillText(r[0],SX+14,ty+24);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.fillText(r[1],SX+300,ty+24);ty+=38;});
+  ctx.strokeStyle='#E2E5E8';ctx.strokeRect(SX,y3+30,SW,specs.length*38);
+  // Cấu tạo (cột phải)
+  ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.textAlign='left';ctx.fillText('CẤU TẠO',CX,y3);ctx.fillStyle='#FB7703';ctx.fillRect(CX,y3+10,90,3);
+  let cy=y3+44;
+  m.cau.forEach(r=>{ctx.fillStyle='#FB7703';ctx.fillRect(CX,cy-2,8,8);ctx.fillStyle='#27343A';ctx.font='700 14px Arial';ctx.textAlign='left';ctx.fillText(r[0]+':',CX+18,cy+5);ctx.font='500 13px Arial';ctx.fillStyle='#6B7680';ctx.fillText(r[1],CX+18,cy+24);cy+=46;});
   // footer
   ctx.fillStyle='#27343A';ctx.fillRect(0,Hd-56,Wd,56);
   ctx.fillStyle='#fff';ctx.font='600 14px Arial';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Công ty TNHH Sản xuất Công nghiệp ICD Việt Nam',40,Hd-28);
@@ -1101,10 +1103,10 @@ function renderSavedList(){
   const cv=$('sheet'); if(!cv)return;
   cv.style.cursor='grab'; cv.style.touchAction='none';
   let drag=null, raf=0;
-  function inHero(cx,cy){            // vùng 3D trong toạ độ logic 1500x1280: x36..1032, y160..746
+  function inHero(cx,cy){            // vùng 3D (khung to toàn ngang) trong toạ độ logic 1500x1720
     const r=cv.getBoundingClientRect();
-    const x=(cx-r.left)/r.width*1500, y=(cy-r.top)/r.height*1280;
-    return x>=36 && x<=1032 && y>=160 && y<=746;
+    const x=(cx-r.left)/r.width*1500, y=(cy-r.top)/r.height*1720;
+    return x>=36 && x<=1464 && y>=150 && y<=786;
   }
   function down(e){
     const p=e.touches?e.touches[0]:e;
