@@ -115,40 +115,40 @@
     <div class="grp" data-eng="block stringer">
       <div class="gt">Nan mặt trên</div>
       <div class="row">
+        <div><label>Số lượng</label><input id="topN" type="number" value="8"></div>
         <div><label>Rộng (mm)</label><input id="topW" type="number" value="75"></div>
         <div><label>Dày (mm)</label><input id="topT" type="number" value="15"></div>
-        <div><label>Số nan</label><input id="topN" type="number" value="8"></div>
       </div>
       <div class="chk"><input type="checkbox" id="topRot" onchange="render()"><label style="margin:0">Đổi chiều nan trên (xoay 90&deg; - chạy theo chiều dài L)</label></div>
     </div>
 
     <!-- BLOCK -->
     <div class="grp" data-eng="block">
-      <div class="gt">Nan liên kết mặt (dọc)</div>
+      <div class="gt">Nan liên kết (dọc)</div>
       <div class="row">
+        <div><label>Số lượng</label><input id="linkN" type="number" value="3"></div>
         <div><label>Rộng</label><input id="linkW" type="number" value="75"></div>
         <div><label>Dày</label><input id="linkT" type="number" value="15"></div>
-        <div><label>Số nan</label><input id="linkN" type="number" value="3"></div>
       </div>
     </div>
     <div class="grp" data-eng="block">
       <div class="gt">Chân cục</div>
       <div class="row">
+        <div><label>Số cục theo dài</label><input id="blkNL" type="number" value="3"></div>
+        <div><label>Số cục theo rộng</label><input id="blkNW" type="number" value="3"></div>
+      </div>
+      <div class="row">
         <div><label>Dài a</label><input id="blkA" type="number" value="100"></div>
         <div><label>Rộng b</label><input id="blkB" type="number" value="80"></div>
         <div><label>Cao h</label><input id="blkH" type="number" value="80"></div>
       </div>
-      <div class="row">
-        <div><label>Số cục theo dài</label><input id="blkNL" type="number" value="3"></div>
-        <div><label>Số cục theo rộng</label><input id="blkNW" type="number" value="3"></div>
-      </div>
     </div>
     <div class="grp" id="g-bot" data-eng="block stringer">
-      <div class="gt">Nan đáy (mặt dưới)</div>
+      <div class="gt">Nan mặt dưới</div>
       <div class="row">
+        <div><label>Số lượng</label><input id="botN" type="number" value="3"></div>
         <div><label>Rộng</label><input id="botW" type="number" value="75"></div>
         <div><label>Dày</label><input id="botT" type="number" value="15"></div>
-        <div><label>Số nan</label><input id="botN" type="number" value="3"></div>
       </div>
       <div class="chk"><input type="checkbox" id="botRot" onchange="render()"><label style="margin:0">Đổi chiều nan đáy (xoay 90&deg; - chạy theo chiều dài L)</label></div>
     </div>
@@ -157,9 +157,9 @@
     <div class="grp" data-eng="stringer">
       <div class="gt">Chân suốt (chạy dọc chiều dài)</div>
       <div class="row">
+        <div><label>Số chân</label><input id="strN" type="number" value="3"></div>
         <div><label>Rộng chân</label><input id="strW" type="number" value="100"></div>
         <div><label>Cao chân</label><input id="strH" type="number" value="90"></div>
-        <div><label>Số chân</label><input id="strN" type="number" value="3"></div>
       </div>
       <div class="chk"><input type="checkbox" id="notch" onchange="render()"><label style="margin:0">Khoét chân (2 hốc/chân → 4 chiều nâng)</label></div>
     </div>
