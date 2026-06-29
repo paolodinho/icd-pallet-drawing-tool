@@ -625,7 +625,7 @@ function buildCollar(){
 }
 
 /* ---------- ISO RENDER ---------- */
-const Z_SCALE=0.5; // nén trục đứng: 1.0=tỉ lệ thật, 0.5=mỏng hơn
+const Z_SCALE=1.0; // tỉ lệ chiều cao THẬT (bản vẽ thi công phải đúng tỉ lệ) - cục đố/chân hiện đúng độ cao
 function proj(x,y,z,s,ox,oy){
   // CAMERA TRỰC GIAO THẬT: xoay quanh trục đứng (yaw) rồi nghiêng theo góc elev. Cứng -> không méo; cạnh đứng luôn dọc.
   const c=Math.cos(VIEW.yaw),sn=Math.sin(VIEW.yaw),se=Math.sin(VIEW.elev),ce=Math.cos(VIEW.elev);
