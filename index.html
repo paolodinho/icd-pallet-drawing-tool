@@ -264,17 +264,13 @@
       <h3 style="margin:2px 0 12px">Bản vẽ kết quả</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(0)">Góc chuẩn</button>
-        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(1)">Chếch phải</button>
-        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(2)">Chếch trái</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(3)">Nhìn cao</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(4)">Gần ngang</button>
-        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(5)">Sau phải</button>
-        <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(6)">Sau trái</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(7)">Mặt sau</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="toggleFull()">Toàn màn hình</button>
       </div>
     </div>
-    <div class="hint" style="margin:0 0 8px">Chọn 1 trong các <b>góc nhìn chuẩn</b> ở trên (đường gióng đã được canh sạch cho từng góc). Góc đang chọn chính là góc sẽ tải xuống khi bấm "Tải ảnh PNG".</div>
+    <div class="hint" style="margin:0 0 8px"><b>Kéo chuột (hoặc chạm) trên hình 3D để xoay tự do</b> - cote tổng L/W/H tự bám đúng cạnh ở mọi góc. Bấm nút góc nhanh để về vị trí chuẩn. Góc đang xem chính là góc sẽ tải xuống khi bấm "Tải ảnh PNG".</div>
     <div id="canvasWrap"><canvas id="sheet" width="1400" height="980"></canvas></div>
   </div>
 </div>
@@ -743,31 +739,39 @@ function drawPalletInto(ctx,area,m){
     else if(b.kind==='block' && b.chamfer>0) drawBlockChamfered(ctx,b,s,ox,oy);
     else drawBox(ctx,b,s,ox,oy);
   });
-  let pa=proj(0,W,0,s,ox,oy),pb=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pa.X,Y:pa.Y+34},{X:pb.X,Y:pb.Y+34},L+' mm');
-  let pc=proj(L,0,0,s,ox,oy),pd=proj(L,W,0,s,ox,oy);dimLine(ctx,{X:pc.X+30,Y:pc.Y+18},{X:pd.X+30,Y:pd.Y+18},W+' mm');
-  let pe=proj(L,W,0,s,ox,oy),pf=proj(L,W,H,s,ox,oy);pe={X:pe.X+46,Y:pe.Y};pf={X:pf.X+46,Y:pf.Y};
-  ctx.strokeStyle='#27343A';ctx.lineWidth=0.8;ctx.fillStyle='#27343A';ctx.beginPath();ctx.moveTo(pe.X,pe.Y);ctx.lineTo(pf.X,pf.Y);ctx.stroke();
-  // tick ngang cho đường H đứng
-  [pe,pf].forEach(p=>{ctx.beginPath();ctx.moveTo(p.X-4,p.Y);ctx.lineTo(p.X+4,p.Y);ctx.stroke();});
-  ctx.save();ctx.translate((pe.X+pf.X)/2+16,(pe.Y+pf.Y)/2);ctx.rotate(-Math.PI/2);ctx.font='bold 14px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=3.5;ctx.strokeStyle='#fff';ctx.strokeText(Math.round(H)+' mm',0,0);ctx.fillStyle='#27343A';ctx.fillText(Math.round(H)+' mm',0,0);ctx.restore();
-  // cote chi tiết (rộng nan, khe hở, độ dày, cao chân...)
-  const ctr=proj(L/2,W/2,H/2,s,ox,oy);   // tâm hình chiếu -> để đẩy cote RA NGOÀI
-  (m.adims||[]).forEach(d=>{
-    const q1=proj(d.a[0],d.a[1],d.a[2],s,ox,oy),q2=proj(d.b[0],d.b[1],d.b[2],s,ox,oy);
+  // ===== COTE TỔNG L / W / H — bám ĐÚNG cạnh ở MỌI góc xoay =====
+  // Đường gióng đẩy VUÔNG GÓC với cạnh, HƯỚNG RA NGOÀI tâm chiếu -> luôn nằm ngoài khối, không cắt qua pallet.
+  // Cote chi tiết (rộng nan/khe/cao chân) đặt ở 2 HÌNH CHIẾU 2D bên dưới, KHÔNG nhồi lên 3D để không rối khi xoay.
+  const ctr=proj(L/2,W/2,H/2,s,ox,oy);
+  const pj=(p)=>proj(p[0],p[1],p[2],s,ox,oy);
+  function farEdge(cands){ // chọn cạnh có trung điểm chiếu XA tâm nhất = cạnh trước/ngoài (cote không bị khuất)
+    let best=cands[0],bd=-1;
+    cands.forEach(e=>{const a=pj(e[0]),b=pj(e[1]);const mx=(a.X+b.X)/2,my=(a.Y+b.Y)/2;const d=Math.hypot(mx-ctr.X,my-ctr.Y);if(d>bd){bd=d;best=e;}});
+    return best;
+  }
+  function totalDim(edge,label,off){
+    const q1=pj(edge[0]),q2=pj(edge[1]);
     const ex=q2.X-q1.X,ey=q2.Y-q1.Y,len=Math.hypot(ex,ey)||1;
     let nx=-ey/len,ny=ex/len;
     const mx=(q1.X+q2.X)/2,my=(q1.Y+q2.Y)/2;
-    if((mx-ctr.X)*nx+(my-ctr.Y)*ny<0){nx=-nx;ny=-ny;}
-    const offD=Math.hypot(d.off.x,d.off.y)||22, vx=nx*offD,vy=ny*offD;
-    const e1={X:q1.X+vx,Y:q1.Y+vy},e2={X:q2.X+vx,Y:q2.Y+vy};
-    if(d.wit){
-      ctx.save();ctx.strokeStyle='#AEB4B9';ctx.lineWidth=0.8;
-      [[q1,e1],[q2,e2]].forEach(([a,b])=>{const dgx=b.X-a.X,dgy=b.Y-a.Y,l2=Math.hypot(dgx,dgy)||1;
-        ctx.beginPath();ctx.moveTo(a.X,a.Y);ctx.lineTo(b.X+dgx/l2*3,b.Y+dgy/l2*3);ctx.stroke();});
-      ctx.restore();
-    }
-    dimLine(ctx,e1,e2,d.label,13);
-  });
+    if((mx-ctr.X)*nx+(my-ctr.Y)*ny<0){nx=-nx;ny=-ny;}   // lật pháp tuyến ra ngoài tâm
+    const e1={X:q1.X+nx*off,Y:q1.Y+ny*off},e2={X:q2.X+nx*off,Y:q2.Y+ny*off};
+    ctx.save();
+    ctx.strokeStyle='#AEB4B9';ctx.lineWidth=0.8;  // đường gióng (witness)
+    ctx.beginPath();ctx.moveTo(q1.X,q1.Y);ctx.lineTo(e1.X+nx*4,e1.Y+ny*4);ctx.moveTo(q2.X,q2.Y);ctx.lineTo(e2.X+nx*4,e2.Y+ny*4);ctx.stroke();
+    ctx.strokeStyle='#27343A';ctx.lineWidth=0.9;  // đường cote
+    ctx.beginPath();ctx.moveTo(e1.X,e1.Y);ctx.lineTo(e2.X,e2.Y);ctx.stroke();
+    const tx=nx*4,ty=ny*4;                          // tick 2 đầu
+    [e1,e2].forEach(p=>{ctx.beginPath();ctx.moveTo(p.X-tx,p.Y-ty);ctx.lineTo(p.X+tx,p.Y+ty);ctx.stroke();});
+    const lx=(e1.X+e2.X)/2+nx*13,ly=(e1.Y+e2.Y)/2+ny*13;
+    ctx.font='bold 15px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.lineWidth=4;ctx.strokeStyle='#fff';ctx.strokeText(label,lx,ly);
+    ctx.fillStyle='#27343A';ctx.fillText(label,lx,ly);
+    ctx.restore();
+  }
+  totalDim(farEdge([[[0,0,0],[L,0,0]],[[0,W,0],[L,W,0]]]), L+' mm', 30);                 // L: 2 cạnh dọc trục x
+  totalDim(farEdge([[[0,0,0],[0,W,0]],[[L,0,0],[L,W,0]]]), W+' mm', 30);                 // W: 2 cạnh dọc trục y
+  totalDim(farEdge([[[0,0,0],[0,0,H]],[[L,0,0],[L,0,H]],[[0,W,0],[0,W,H]],[[L,W,0],[L,W,H]]]), Math.round(H)+' mm', 30); // H: 4 cạnh đứng
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
@@ -1072,6 +1076,42 @@ function renderSavedList(){
   if(!arr.length){el.innerHTML='<div class="saved-empty">Chua co mau nao. Nhap ten roi bam Luu mau.</div>';return;}
   el.innerHTML=arr.map((d,i)=>'<div class="saved-item"><span class="saved-name" title="Tai mau: '+d.name+'" onclick="loadDesign('+i+')">'+d.name+'</span><button class="saved-load" onclick="loadDesign('+i+')">Tai</button><button class="saved-del" onclick="deleteDesign('+i+')" title="Xoa">&#x2715;</button></div>').join('');
 }
+
+// ====== XOAY TỰ DO 3D: kéo chuột / chạm trên vùng phối cảnh ======
+// Khoá theo 1 trục mỗi lần kéo (yaw HOẶC elev) để không trộn 2 hướng -> mượt, không cảm giác méo.
+// (ELEV_MIN/ELEV_MAX đã khai báo ở phần đầu script)
+(function(){
+  const cv=$('sheet'); if(!cv)return;
+  cv.style.cursor='grab'; cv.style.touchAction='none';
+  let drag=null, raf=0;
+  function inHero(cx,cy){            // vùng 3D trong toạ độ logic 1500x1280: x36..1032, y160..746
+    const r=cv.getBoundingClientRect();
+    const x=(cx-r.left)/r.width*1500, y=(cy-r.top)/r.height*1280;
+    return x>=36 && x<=1032 && y>=160 && y<=746;
+  }
+  function down(e){
+    const p=e.touches?e.touches[0]:e;
+    if(!inHero(p.clientX,p.clientY))return;
+    drag={x:p.clientX,y:p.clientY,axis:null};
+    cv.style.cursor='grabbing';
+    if(e.cancelable)e.preventDefault();
+  }
+  function move(e){
+    if(!drag)return;
+    const p=e.touches?e.touches[0]:e;
+    const dx=p.clientX-drag.x, dy=p.clientY-drag.y;
+    if(!drag.axis){ if(Math.abs(dx)>5||Math.abs(dy)>5) drag.axis=(Math.abs(dx)>=Math.abs(dy))?'yaw':'elev'; else return; }
+    if(drag.axis==='yaw') VIEW.yaw += dx*0.01;
+    else VIEW.elev = Math.max(ELEV_MIN, Math.min(ELEV_MAX, VIEW.elev - dy*0.004));
+    drag.x=p.clientX; drag.y=p.clientY;
+    curView=-1; document.querySelectorAll('.vbtn').forEach(b=>{b.style.borderColor='';b.style.color='';});
+    if(!raf)raf=requestAnimationFrame(()=>{raf=0;render();});
+    if(e.cancelable)e.preventDefault();
+  }
+  function up(){ if(drag){drag=null;cv.style.cursor='grab';} }
+  cv.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+  cv.addEventListener('touchstart',down,{passive:false}); window.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up);
+})();
 
 buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();setView(0);
 loadSavedCache().then(()=>renderSavedList());
