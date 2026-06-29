@@ -854,27 +854,8 @@ function drawPalletInto(ctx,area,m){
   totalDim(farEdge([[[0,0,0],[L,0,0]],[[0,W,0],[L,W,0]]]), L+' mm', 30);                 // L: 2 cạnh dọc trục x
   totalDim(farEdge([[[0,0,0],[0,W,0]],[[L,0,0],[L,W,0]]]), W+' mm', 30);                 // W: 2 cạnh dọc trục y
   totalDim(farEdge([[[0,0,0],[0,0,H]],[[L,0,0],[L,0,H]],[[0,W,0],[0,W,H]],[[L,W,0],[L,W,H]]]), Math.round(H)+' mm', 30); // H: 4 cạnh đứng
-  // ===== COTE CHI TIẾT (rộng nan/khe + độ dày từng lớp) — cùng perp-outward -> bám đúng cạnh ở MỌI góc xoay =====
-  (m.adims||[]).forEach(d=>{
-    const q1=pj(d.a),q2=pj(d.b);
-    const ex=q2.X-q1.X,ey=q2.Y-q1.Y,len=Math.hypot(ex,ey); if(len<4)return;   // bỏ cote quá ngắn (khe ~0)
-    let nx=-ey/len,ny=ex/len;
-    const mx=(q1.X+q2.X)/2,my=(q1.Y+q2.Y)/2;
-    if((mx-ctr.X)*nx+(my-ctr.Y)*ny<0){nx=-nx;ny=-ny;}   // pháp tuyến ra ngoài tâm
-    const off=16;
-    const e1={X:q1.X+nx*off,Y:q1.Y+ny*off},e2={X:q2.X+nx*off,Y:q2.Y+ny*off};
-    ctx.save();
-    ctx.strokeStyle='#C2C7CB';ctx.lineWidth=0.6;   // đường gióng nhạt
-    ctx.beginPath();ctx.moveTo(q1.X,q1.Y);ctx.lineTo(e1.X+nx*3,e1.Y+ny*3);ctx.moveTo(q2.X,q2.Y);ctx.lineTo(e2.X+nx*3,e2.Y+ny*3);ctx.stroke();
-    ctx.strokeStyle='#5A6168';ctx.lineWidth=0.7;   // đường cote
-    ctx.beginPath();ctx.moveTo(e1.X,e1.Y);ctx.lineTo(e2.X,e2.Y);ctx.stroke();
-    const tx=nx*3,ty=ny*3;[e1,e2].forEach(p=>{ctx.beginPath();ctx.moveTo(p.X-tx,p.Y-ty);ctx.lineTo(p.X+tx,p.Y+ty);ctx.stroke();});
-    const lx=(e1.X+e2.X)/2+nx*9,ly=(e1.Y+e2.Y)/2+ny*9;
-    ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.strokeText(d.label,lx,ly);
-    ctx.fillStyle='#5A6168';ctx.fillText(d.label,lx,ly);
-    ctx.restore();
-  });
+  // Cote chi tiết (rộng nan/khe + độ dày từng lớp) CHỈ vẽ ở 2 hình chiếu 2D bên dưới,
+  // KHÔNG nhồi lên 3D để khỏi rối/đè số ở góc xoay (m.adims giữ lại cho mục đích khác nếu cần).
 }
 function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 
@@ -920,8 +901,17 @@ function draw2DTop(ctx,area,m){
   ctx.strokeStyle='#9aa0a5';ctx.strokeRect(X(0),Y(0),dw,dh);
   hDim(ctx,X(0),X(L),Y(W)+26,L+' mm');
   vDim(ctx,Y(0),Y(W),X(L)+28,W+' mm');
-  // cote rộng nan + khe hở (chỉ cho nan mặt thật: block/stringer; bỏ qua khung gỗ)
-  if(top.length>1 && !m.collar && top[0].dx < m.L*0.6){const a=top[0],b=top[1],gap=b.x-(a.x+a.dx);hDim(ctx,X(a.x),X(a.x+a.dx),Y(0)-14,Math.round(a.dx)+'');if(gap>2)hDim(ctx,X(a.x+a.dx),X(b.x),Y(0)-14,Math.round(gap)+'');}
+  // cote rộng nan + khe hở ĐẦY ĐỦ chuỗi (xem được khoảng cách nhóm nan) - bỏ qua khung gỗ
+  if(top.length>1 && !m.collar){
+    const along=top[0].dx < top[0].dy;   // true: nan trải theo x (cote ngang trên); false: trải theo y (cote dọc trái)
+    if(along){ const yy=Y(0)-14;
+      top.forEach((b,i)=>{ hDim(ctx,X(b.x),X(b.x+b.dx),yy,Math.round(b.dx)+'');
+        if(i<top.length-1){const g=top[i+1].x-(b.x+b.dx); if(g>2)hDim(ctx,X(b.x+b.dx),X(top[i+1].x),yy,Math.round(g)+'');}});
+    } else { const ty=[...top].sort((a,b)=>a.y-b.y), xx=X(0)-14;
+      ty.forEach((b,i)=>{ vDim(ctx,Y(b.y),Y(b.y+b.dy),xx,Math.round(b.dy)+'');
+        if(i<ty.length-1){const g=ty[i+1].y-(b.y+b.dy); if(g>2)vDim(ctx,Y(b.y+b.dy),Y(ty[i+1].y),xx,Math.round(g)+'');}});
+    }
+  }
   // cote chân cục theo CHIỀU RỘNG W (rộng cục b + khe + đua biên) - đặt bên trái, không đụng cote W bên phải
   if($('engine').value==='block' && blocks.length){
     const ys=uniqY(blocks), bh=blocks[0].dy, xl=X(0)-12;
