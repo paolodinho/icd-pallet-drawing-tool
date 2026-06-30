@@ -70,9 +70,14 @@
     button{padding:14px;font-size:16px}
     canvas{border:1px solid var(--line);border-radius:6px}
   }
-  /* nút tải PNG nổi bật, dính đáy trên mobile để bấm nhanh sau khi chỉnh */
+  /* ===== STICKY CANVAS — desktop: canvas dính phải khi scroll form ===== */
+  .out{position:sticky;top:18px;align-self:flex-start;max-height:calc(100vh - 36px);overflow-y:auto;}
+  /* Mobile: canvas lên đầu (sticky top), form cuộn bên dưới */
   @media (max-width:820px){
-    .out{order:2}.form{order:1}
+    .out{order:1;top:0;z-index:50;max-height:none;overflow-y:visible;border-radius:0 0 8px 8px;padding:8px 10px;}
+    .form{order:2}
+    #outCtrlRow{display:none}   /* ẩn dãy nút góc nhìn + toàn màn hình trên mobile */
+    .out .hint{display:none}    /* ẩn ghi chú dài để tiết kiệm chiều cao */
   }
   /* ===== LƯU MẪU ===== */
   .saved-section{margin-bottom:13px;padding-bottom:11px;border-bottom:1px dashed var(--line)}
@@ -114,14 +119,9 @@
   </div>
 </header>
 
-<div class="wrap">
+<div class="wrap" id="mainWrap" style="display:none">
   <div class="panel form">
     <h3>Thông số đầu vào</h3>
-
-    <div id="unlockBar" class="unlock-bar">
-      <span id="unlockStatus">Chế độ khách: ảnh có watermark, tối đa 3 ảnh.</span>
-      <button type="button" class="link-btn" onclick="openEntryModal()">Nhập mật khẩu</button>
-    </div>
 
     <div class="sec"><b>1</b> Chọn mẫu pallet</div>
     <div class="grp">
@@ -164,16 +164,16 @@
         <div style="flex:0 0 34%"><label>Nan/nhóm</label><input id="topGroup" type="number" value="1" min="1" oninput="render()"></div>
         <div><label>Tự tính khe</label>
           <select id="topGapAuto" onchange="render()">
-            <option value="in">Khe trong (auto)</option>
             <option value="out">Khe ngoài (auto)</option>
+            <option value="in">Khe trong (auto)</option>
           </select>
         </div>
       </div>
       <div class="row" style="margin-top:6px">
-        <div><label>Khe ngoài (mm)</label><input id="topGapOut" type="number" value="40" min="0" oninput="render()"></div>
-        <div><label>Khe trong (mm)</label><input id="topGap" type="number" value="0" min="0" oninput="render()"></div>
+        <div><label>Khe ngoài (mm)</label><input id="topGapOut" type="number" value="0" min="0" oninput="render()"></div>
+        <div><label>Khe trong (mm)</label><input id="topGap" type="number" value="10" min="0" oninput="render()"></div>
       </div>
-      <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.45">Nhóm=1: dàn đều (bỏ qua khe). Nhóm≥2: nhập <b>khe ngoài</b> (giữa các nhóm), tool tự tính <b>khe trong</b> cho vừa khít chiều dài/rộng pallet. Ô bị mờ là ô tool đang tự tính.</div>
+      <div style="font-size:10px;color:#888;margin-top:6px;line-height:1.45">Nhóm=1: dàn đều (bỏ qua khe). Nhóm≥2: nhập <b>khe trong</b> (khe nhỏ giữa các nan trong cùng nhóm), tool tự tính <b>khe ngoài</b> (khoảng cách giữa các nhóm) cho vừa khít. Ô bị mờ là ô tool đang tự tính.</div>
     </div>
 
     <!-- NAN LIÊN KẾT (block luôn có; stringer chỉ khi đổi chiều nan trên) -->
@@ -306,6 +306,10 @@
         <input id="saveName" placeholder="Để trống = tự đặt tên theo thông số">
         <button onclick="saveDesign()">Lưu mẫu</button>
       </div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button type="button" onclick="exportDesigns()" class="btn-ghost" style="flex:1;margin:0;padding:7px 10px;font-size:12px;font-weight:700">Xuất file .json</button>
+        <label class="btn-ghost" style="flex:1;margin:0;padding:7px 10px;font-size:12px;font-weight:700;text-align:center;cursor:pointer;border-radius:7px;border:1px solid var(--line)">Nhập file .json<input type="file" accept=".json" style="display:none" onchange="importDesigns(this)"></label>
+      </div>
       <input id="saveSearch" class="saved-search" placeholder="Tìm theo tên hoặc loại pallet..." oninput="renderSavedList()">
       <div id="savedList" class="saved-list"></div>
     </div>
@@ -316,7 +320,7 @@
   </div>
 
   <div class="panel out">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+    <div id="outCtrlRow" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h3 style="margin:2px 0 12px">Bản vẽ kết quả</h3>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(0)">Góc chuẩn</button>
@@ -325,6 +329,7 @@
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(7)">Mặt sau</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="toggleFull()">Toàn màn hình</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="printSheet()">In bản vẽ (A4)</button>
+        <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px;color:#c0392b;border-color:#c0392b" onclick="doLogout()">Thoát</button>
       </div>
     </div>
     <div class="hint" style="margin:0 0 8px"><b>Kéo chuột (hoặc chạm) trên hình 3D để xoay tự do</b> - cote tổng L/W/H tự bám đúng cạnh ở mọi góc. Bấm nút góc nhanh để về vị trí chuẩn. Góc đang xem chính là góc sẽ tải xuống khi bấm "Tải ảnh PNG".</div>
@@ -334,44 +339,20 @@
 
 <div id="entryOverlay" class="reg-overlay">
   <div class="reg-box">
-    <div class="reg-title">Chọn cách sử dụng công cụ</div>
-    <div class="reg-desc">Công cụ tạo bản vẽ pallet gỗ của ICD Việt Nam. Bạn có thể dùng ngay, hoặc nhập mật khẩu để dùng đầy đủ tính năng.</div>
-    <label class="reg-l">Nhập mật khẩu để dùng đầy đủ (ảnh không watermark, tải không giới hạn)</label>
+    <div class="reg-title">Nhập mật khẩu để sử dụng</div>
+    <div class="reg-desc">Công cụ tạo bản vẽ pallet gỗ của ICD Việt Nam. Vui lòng nhập mật khẩu để truy cập.</div>
+    <label class="reg-l">Mật khẩu</label>
     <div class="row" style="align-items:stretch;gap:10px">
       <input id="pass" type="password" class="reg-i" style="flex:2" placeholder="Nhập mật khẩu" onkeydown="if(event.key==='Enter')tryUnlock()">
-      <button type="button" class="btn-primary" style="flex:1;width:auto;margin:0;white-space:nowrap" onclick="tryUnlock()">Mở khoá</button>
+      <button type="button" class="btn-primary" style="flex:1;width:auto;margin:0;white-space:nowrap" onclick="tryUnlock()">Truy cập</button>
     </div>
     <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#27343A;margin-top:10px;cursor:pointer;font-weight:500">
       <input id="rememberPass" type="checkbox" style="width:16px;height:16px;margin:0"> Lưu mật khẩu cho lần sau
     </label>
     <div id="lockMsg" class="reg-msg"></div>
-    <div style="border-top:1px solid #EEF0F2;margin-top:16px;padding-top:14px">
-      <button type="button" class="btn-ghost" style="width:100%;margin:0" onclick="dismissEntry()">Vẫn dùng (ảnh có watermark, tối đa 3 ảnh)</button>
-    </div>
   </div>
 </div>
 
-<div id="regOverlay" class="reg-overlay">
-  <div class="reg-box">
-    <div class="reg-title">Đăng ký để tải bản vẽ</div>
-    <div class="reg-desc">Vui lòng để lại thông tin để tải ảnh.</div>
-    <label class="reg-l">Email <span>*</span></label>
-    <input id="regEmail" type="email" class="reg-i" placeholder="ten@congty.com">
-    <label class="reg-l">Số điện thoại <span>*</span></label>
-    <input id="regPhone" type="tel" class="reg-i" placeholder="09xx xxx xxx">
-    <label class="reg-l">Tên công ty <span>*</span></label>
-    <input id="regCompany" type="text" class="reg-i" placeholder="Công ty TNHH ...">
-    <label class="reg-l">Mã số thuế</label>
-    <input id="regMst" type="text" class="reg-i" placeholder="(không bắt buộc)">
-    <input id="regWebsite" type="text" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
-    <div id="regMsg" class="reg-msg"></div>
-    <div class="reg-actions">
-      <button type="button" class="btn-ghost" style="width:auto;margin:0" onclick="closeRegModal()">Để sau</button>
-      <button type="button" class="btn-primary" style="width:auto;margin:0" id="regSubmit" onclick="submitReg()">Gửi & tải ảnh</button>
-    </div>
-    <div class="reg-note">Hoặc nhập mật khẩu ICD ở khung bên trái để tải không giới hạn, không watermark.</div>
-  </div>
-</div>
 
 <script src="assets/logo.js"></script>
 <script>
@@ -939,17 +920,17 @@ function drawPalletInto(ctx,area,m){
   totalDim(farEdge([[[0,0,0],[0,0,H]],[[L,0,0],[L,0,H]],[[0,W,0],[0,W,H]],[[L,W,0],[L,W,H]]]), Math.round(H)+' mm', 46); // H: 4 cạnh đứng
   // ===== COTE CHI TIẾT TRÊN 3D (như bản vẽ mẫu) - mọi đoạn dùng segDim nên đường gióng chuẩn mọi góc =====
   if(!m.collar){
-    // A. NAN MẶT TRÊN: rộng nan + khe hở, bám cạnh trên-trước
+    // A. NAN MẶT TRÊN: rộng nan + khe hở — chỉ chú thích 1 đại diện tránh nhiều cote liền nhau trông như nét đứt
     const topB=m.boxes.filter(b=>Math.abs((b.z+b.dz)-H)<0.6);
     if(topB.length>1){
       if(topB[0].dx<topB[0].dy){   // nan dàn theo trục x -> cote dọc cạnh trên song song x
         const srt=[...topB].sort((a,b)=>a.x-b.x),yE=farEdge([[[0,0,H],[L,0,H]],[[0,W,H],[L,W,H]]])[0][1];
-        srt.forEach((b,i)=>{ segDim([b.x,yE,H],[b.x+b.dx,yE,H],Math.round(b.dx)+'',14,true);
-          if(i<srt.length-1){const g=srt[i+1].x-(b.x+b.dx); if(g>2)segDim([b.x+b.dx,yE,H],[srt[i+1].x,yE,H],Math.round(g)+'',27,true);} });
+        segDim([srt[0].x,yE,H],[srt[0].x+srt[0].dx,yE,H],Math.round(srt[0].dx)+'',14,true);
+        if(srt.length>1){const g=srt[1].x-(srt[0].x+srt[0].dx);if(g>2)segDim([srt[0].x+srt[0].dx,yE,H],[srt[1].x,yE,H],Math.round(g)+'',27,true);}
       } else {                     // nan dàn theo trục y -> cote dọc cạnh trên song song y
         const srt=[...topB].sort((a,b)=>a.y-b.y),xE=farEdge([[[0,0,H],[0,W,H]],[[L,0,H],[L,W,H]]])[0][0];
-        srt.forEach((b,i)=>{ segDim([xE,b.y,H],[xE,b.y+b.dy,H],Math.round(b.dy)+'',14,true);
-          if(i<srt.length-1){const g=srt[i+1].y-(b.y+b.dy); if(g>2)segDim([xE,b.y+b.dy,H],[xE,srt[i+1].y,H],Math.round(g)+'',27,true);} });
+        segDim([xE,srt[0].y,H],[xE,srt[0].y+srt[0].dy,H],Math.round(srt[0].dy)+'',14,true);
+        if(srt.length>1){const g=srt[1].y-(srt[0].y+srt[0].dy);if(g>2)segDim([xE,srt[0].y+srt[0].dy,H],[xE,srt[1].y,H],Math.round(g)+'',27,true);}
       }
     }
     // B. CHIỀU CAO từng lớp (nan trên / chân / nan đáy), bám cạnh đứng-trước
@@ -1155,81 +1136,28 @@ function render(){
   ctx.fillStyle='#27343A';ctx.fillRect(0,Hd-56,Wd,56);
   ctx.fillStyle='#fff';ctx.font='600 14px Arial';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Công ty TNHH Sản xuất Công nghiệp ICD Việt Nam',40,Hd-28);
   ctx.textAlign='right';ctx.fillStyle='#FB7703';ctx.font='700 14px Arial';ctx.fillText('Hotline: 0983 797 186   •   sales@icdvietnam.com.vn   •   icdvietnam.com.vn',Wd-40,Hd-28);
-  if(!UNLOCKED)drawWatermark(ctx,Wd,Hd);
 }
-/* ===== KHOÁ / WATERMARK ===== */
+/* ===== KHOÁ ===== */
 function _h(s){let x=5381;for(let i=0;i<s.length;i++){x=((x<<5)+x+s.charCodeAt(i))>>>0;}return x;}
 const PASS_HASH=1282699990;          // hash mật khẩu nhân viên ICD (đổi: thay bằng _h('mật khẩu mới'))
 let UNLOCKED=false; try{UNLOCKED=(sessionStorage.getItem('icd_pallet_unlocked')==='1')||(localStorage.getItem('icd_pallet_unlocked')==='1');}catch(e){}
-function setLockUI(){const bar=$('unlockBar'),st=$('unlockStatus');if(!bar||!st)return;
-  if(UNLOCKED){st.textContent='Đã mở khoá: tải ảnh không giới hạn, không watermark.';bar.classList.add('ok');
-    const b=bar.querySelector('.link-btn');if(b)b.style.display='none';}
-  else{st.textContent='Chế độ khách: ảnh có watermark, tối đa 3 ảnh.';bar.classList.remove('ok');
-    const b=bar.querySelector('.link-btn');if(b)b.style.display='';}}
 function scrollIntoViewParent(){try{window.scrollTo(0,0);}catch(e){}try{parent.postMessage({icdPalletScroll:1},'*');}catch(e){}}
 function openEntryModal(){$('entryOverlay').classList.add('show');const m=$('lockMsg');if(m)m.textContent='';
   scrollIntoViewParent();}
-function dismissEntry(){$('entryOverlay').classList.remove('show');try{sessionStorage.setItem('icd_pallet_entry_done','1');}catch(e){}}
+function doLogout(){UNLOCKED=false;try{sessionStorage.removeItem('icd_pallet_unlocked');localStorage.removeItem('icd_pallet_unlocked');}catch(e){}$('mainWrap').style.display='none';openEntryModal();}
 function tryUnlock(){const v=($('pass').value||'').trim();const m=$('lockMsg');
   if(_h(v)===PASS_HASH){UNLOCKED=true;
     const remember=$('rememberPass')&&$('rememberPass').checked;
     try{sessionStorage.setItem('icd_pallet_unlocked','1');
       if(remember)localStorage.setItem('icd_pallet_unlocked','1');else localStorage.removeItem('icd_pallet_unlocked');}catch(e){}
-    $('entryOverlay').classList.remove('show');setLockUI();render();}
+    $('entryOverlay').classList.remove('show');$('mainWrap').style.display='';render();}
   else if(m){m.textContent='Mật khẩu chưa đúng, vui lòng thử lại.';m.style.color='#C62828';}}
-function drawWatermark(ctx,W,H){
-  ctx.save();
-  ctx.globalAlpha=0.09;ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);
-  if(LOGO_OK){const lw=300,lh=lw*LOGO.height/LOGO.width;
-    for(let y=-H;y<H;y+=lh+170){for(let x=-W;x<W;x+=lw+120){ctx.drawImage(LOGO,x,y,lw,lh);}}}
-  ctx.restore();
-  ctx.save();ctx.globalAlpha=0.16;ctx.fillStyle='#27343A';ctx.font='800 64px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.translate(W/2,H/2);ctx.rotate(-Math.PI/9);ctx.fillText('icdvietnam.com.vn',0,0);ctx.restore();
-}
-const LEAD_URL='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-lead';
-const REG_LIMIT=3;
-function isRegistered(){try{return localStorage.getItem('icd_pallet_reg')==='1';}catch(e){return false;}}
-function regCount(){try{return parseInt(localStorage.getItem('icd_pallet_reg_dls')||'0',10)||0;}catch(e){return 0;}}
-function doExport(){
-  RENDER_DPR=4;                 // xuất nét cao (6000x5120px) cho zoom/cắt vào báo giá
+function downloadPNG(){
+  RENDER_DPR=4;
   try{render();
     const a=document.createElement('a');a.href=$('sheet').toDataURL('image/png');
     a.download='ban-ve-'+(($('title').value||'pallet').replace(/[^\w]+/g,'-').toLowerCase())+'.png';a.click();
-  }finally{RENDER_DPR=2;render();}   // trả màn hình về 2x cho nhẹ
-}
-function downloadPNG(){
-  if(UNLOCKED){doExport();return;}                       // nhân viên ICD: không giới hạn, ảnh sạch
-  if(!isRegistered()){openRegModal();return;}            // chưa đăng ký -> hiện form
-  const n=regCount();
-  if(n>=REG_LIMIT){alert('Bạn đã tải đủ '+REG_LIMIT+' ảnh. Vui lòng liên hệ ICD (0983 797 186) để được hỗ trợ, hoặc nhập mật khẩu để tải không giới hạn.');return;}
-  try{localStorage.setItem('icd_pallet_reg_dls',String(n+1));}catch(e){}
-  doExport();
-}
-function openRegModal(){const o=$('regOverlay');o.classList.add('show');$('regMsg').textContent='';
-  scrollIntoViewParent();}
-function closeRegModal(){$('regOverlay').classList.remove('show');}
-function submitReg(){
-  const email=($('regEmail').value||'').trim();
-  const phone=($('regPhone').value||'').trim();
-  const company=($('regCompany').value||'').trim();
-  const mst=($('regMst').value||'').trim();
-  const website=($('regWebsite').value||'').trim(); // honeypot
-  const msg=$('regMsg');
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){msg.style.color='#C62828';msg.textContent='Email chưa hợp lệ.';return;}
-  if(phone.length<8){msg.style.color='#C62828';msg.textContent='Vui lòng nhập số điện thoại.';return;}
-  if(company.length<2){msg.style.color='#C62828';msg.textContent='Vui lòng nhập tên công ty.';return;}
-  const btn=$('regSubmit');btn.disabled=true;msg.style.color='#6B7680';msg.textContent='Đang gửi...';
-  fetch(LEAD_URL,{method:'POST',headers:{'Content-Type':'text/plain'},
-    body:JSON.stringify({email:email,phone:phone,company:company,mst:mst,website:website})})
-   .then(r=>r.json().catch(()=>({ok:r.ok})))
-   .then(d=>{
-     btn.disabled=false;
-     if(d&&d.ok){
-       try{localStorage.setItem('icd_pallet_reg','1');}catch(e){}
-       closeRegModal();doExport();
-     }else{msg.style.color='#C62828';msg.textContent='Gửi chưa thành công, vui lòng kiểm tra lại thông tin.';}
-   })
-   .catch(()=>{btn.disabled=false;msg.style.color='#C62828';msg.textContent='Lỗi kết nối, vui lòng thử lại.';});
+  }finally{RENDER_DPR=2;render();}
 }
 
 function toggleFull(){
@@ -1267,7 +1195,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
   document.querySelectorAll('.vbtn').forEach((b,k)=>{b.style.borderColor=(k===curView)?'#FB7703':'';b.style.color=(k===curView)?'#FB7703':'';});
   render();}
 /* ===== LƯU / TẢI MẪU ===== */
-const API='https://icdvietnam.com.vn/wp-json/icd/v1/pallet-designs';
+const LS_KEY='icd_pallet_designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap','topGapOut','topGapAuto',
   'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
   'botN','botW','botT','botRot','strN','strW','strH','notch','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat'];
@@ -1284,8 +1212,12 @@ function setFormState(s){
   if(s._view!==undefined)setView(s._view);else render();
 }
 let _savedCache=null;
-async function loadSavedCache(){
-  try{const r=await fetch(API);_savedCache=await r.json();}catch(e){_savedCache=[];}
+function loadSavedCache(){
+  try{_savedCache=JSON.parse(localStorage.getItem(LS_KEY)||'[]');}catch(e){_savedCache=[];}
+  if(!Array.isArray(_savedCache))_savedCache=[];
+}
+function _saveCache(){
+  try{localStorage.setItem(LS_KEY,JSON.stringify(_savedCache));}catch(e){alert('Lỗi lưu localStorage: '+e.message);}
 }
 // ---- Tự phân loại + tự đặt tên mẫu theo thông số ----
 const MK_SHORT={US:'GMA',EU:'EPAL',JP:'JP',KR:'KR',AU:'AU',OTHER:'XK'};
@@ -1325,36 +1257,66 @@ function subtitle(s){                       // dòng phụ dưới tên: thông 
   if(s.market&&s.market!=='VN'&&MK_FULL[s.market]) p.push(MK_FULL[s.market]);
   return p.join(' · ');
 }
-async function saveDesign(){
+function saveDesign(){
   const state=getFormState();
   let name=($('saveName').value||'').trim();
-  if(!name){ name=uniqueName(autoName(state)); }          // để trống -> tự đặt tên
-  else if(_savedCache&&_savedCache.find(d=>d.name===name)){
-    if(!confirm('Mau "'+name+'" da ton tai. Ghi de?'))return;
+  if(!name){ name=uniqueName(autoName(state)); }
+  else {
+    const existing=_savedCache&&_savedCache.findIndex(d=>d.name===name);
+    if(existing>=0){
+      if(!confirm('Mẫu "'+name+'" đã tồn tại. Ghi đè?'))return;
+      _savedCache.splice(existing,1);
+    }
   }
-  $('saveName').style.borderColor='';
+  _savedCache.unshift({name,state,ts:Date.now()});
+  _saveCache();
+  $('saveName').value='';
+  renderSavedList();
   const btn=document.querySelector('.save-row button');
-  if(btn){btn.textContent='Dang luu...';btn.disabled=true;}
-  try{
-    await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,state})});
-    $('saveName').value='';
-    await loadSavedCache();
-    renderSavedList();
-  }catch(e){alert('Loi luu: '+e.message);}
-  if(btn){btn.textContent='Luu mau';btn.disabled=false;}
+  if(btn){const t=btn.textContent;btn.textContent='Đã lưu!';setTimeout(()=>{btn.textContent=t;},1200);}
 }
-async function loadDesign(idx){
+function loadDesign(idx){
   if(!_savedCache||!_savedCache[idx])return;
   setFormState(_savedCache[idx].state);
 }
-async function deleteDesign(idx){
+function deleteDesign(idx){
   if(!_savedCache||!_savedCache[idx])return;
-  if(!confirm('Xoa mau "'+_savedCache[idx].name+'"?'))return;
-  try{
-    await fetch(API+'/'+encodeURIComponent(_savedCache[idx].name),{method:'DELETE'});
-    await loadSavedCache();
-    renderSavedList();
-  }catch(e){alert('Loi xoa: '+e.message);}
+  if(!confirm('Xóa mẫu "'+_savedCache[idx].name+'"?'))return;
+  _savedCache.splice(idx,1);
+  _saveCache();
+  renderSavedList();
+}
+function exportDesigns(){
+  if(!_savedCache||!_savedCache.length){alert('Chưa có mẫu nào để xuất.');return;}
+  const blob=new Blob([JSON.stringify(_savedCache,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='pallet-designs-'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function importDesigns(input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!Array.isArray(data))throw new Error('File không hợp lệ');
+      let added=0;
+      data.forEach(item=>{
+        if(!item.name||!item.state)return;
+        const dup=_savedCache.findIndex(d=>d.name===item.name);
+        if(dup>=0)_savedCache.splice(dup,1);
+        _savedCache.push(item);
+        added++;
+      });
+      _saveCache();
+      renderSavedList();
+      alert('Đã nhập '+added+' mẫu.');
+    }catch(ex){alert('Lỗi đọc file: '+ex.message);}
+    input.value='';
+  };
+  reader.readAsText(file);
 }
 function renderSavedList(){
   const all=_savedCache||[];const el=$('savedList');if(!el)return;
@@ -1412,9 +1374,9 @@ function renderSavedList(){
   cv.addEventListener('touchstart',down,{passive:false}); window.addEventListener('touchmove',move,{passive:false}); window.addEventListener('touchend',up);
 })();
 
-buildPresetMenu();$('size').value='1219x1016';applyStyle();setLockUI();setView(0);
-loadSavedCache().then(()=>renderSavedList());
-if(!UNLOCKED){openEntryModal();}   // vào trang: hiện popup chọn cách dùng
+buildPresetMenu();$('size').value='1219x1016';applyStyle();setView(0);
+loadSavedCache();renderSavedList();
+if(UNLOCKED){$('mainWrap').style.display='';}else{openEntryModal();}   // vào trang: hiện popup hoặc vào thẳng nếu đã có session
 // LIVE: mọi ô thay đổi là vẽ lại ngay (style/size đã tự render trong handler riêng)
 ['input','change'].forEach(ev=>document.querySelector('.panel.form').addEventListener(ev,e=>{
   if(e.target.id==='style'||e.target.id==='size')return;
