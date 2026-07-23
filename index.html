@@ -103,15 +103,15 @@
   /* In ra A4 ngang: chỉ in đúng 1 trang bản vẽ (canvas), không trang trắng */
   @page{size:A4 landscape;margin:8mm}
   @media print{
-    html,body{width:100%!important;height:auto!important;margin:0!important;padding:0!important;overflow:hidden!important}
+    html,body{width:100%!important;height:auto!important;margin:0!important;padding:0!important}
     /* Ẩn tất cả ngoại trừ canvas và các wrapper cha của nó */
     header,.panel.form,#entryOverlay,.reg-overlay,#outCtrlRow,.out>.hint,#fsExit,
     #mainWrap>.form,.out>*:not(#canvasWrap){display:none!important}
     /* Reset wrapper để canvas chiếm toàn trang */
     #mainWrap.wrap{padding:0!important;margin:0!important;display:block!important;gap:0!important}
     .panel.out,.out{padding:0!important;margin:0!important;border:none!important;background:transparent!important;position:static!important;max-height:none!important;overflow:visible!important;display:block!important}
-    /* Wrapper: vừa khít 1 trang A4 ngang, canvas scale vừa trong */
-    #canvasWrap{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:194mm!important;max-height:194mm!important;overflow:hidden!important;page-break-after:avoid!important;page-break-inside:avoid!important;padding:0!important;margin:0!important}
+    /* Wrapper: scale canvas lấp đầy đúng 1 trang, không bao giờ sang trang 2 */
+    #canvasWrap{display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:calc(100vh - 16mm)!important;max-height:calc(100vh - 16mm)!important;overflow:hidden!important;page-break-after:avoid!important;page-break-inside:avoid!important;padding:0!important;margin:0!important}
     #canvasWrap>:not(#sheet){display:none!important}
     #sheet{max-width:100%!important;max-height:100%!important;width:auto!important;height:auto!important;border-radius:0!important;display:block!important;margin:0!important}
   }
