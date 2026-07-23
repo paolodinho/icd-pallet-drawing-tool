@@ -100,13 +100,18 @@
   .saved-del{padding:7px 10px;font-size:12px;font-weight:700;color:#999;background:none;border:none;border-left:1px solid var(--line);cursor:pointer}
   .saved-del:hover{color:#C62828;background:#FFF5F5}
   .saved-empty{font-size:12px;color:#9AA3AB;padding:4px 0}
-  /* In ra A4 dọc: chỉ in bản vẽ (canvas), vừa khít 1 trang */
+  /* In ra A4 ngang: chỉ in đúng 1 trang bản vẽ (canvas), không trang trắng */
   @page{size:A4 landscape;margin:8mm}
   @media print{
-    body.printing *{visibility:hidden!important}
-    body.printing #canvasWrap,body.printing #canvasWrap *{visibility:visible!important}
-    body.printing #canvasWrap{position:absolute;left:0;top:0;width:100%;padding:0;background:#fff}
-    body.printing #sheet{width:100%!important;height:auto!important;border-radius:0}
+    html,body{width:auto!important;height:auto!important;margin:0!important;padding:0!important;overflow:visible!important}
+    /* Ẩn tất cả ngoại trừ canvas và các wrapper cha của nó */
+    header,.panel.form,#entryOverlay,.reg-overlay,#outCtrlRow,.out>.hint,#fsExit,
+    #mainWrap>.form,.out>*:not(#canvasWrap){display:none!important}
+    /* Reset wrapper để canvas chiếm toàn trang */
+    #mainWrap.wrap{padding:0!important;margin:0!important;display:block!important}
+    .panel.out{padding:0!important;margin:0!important;border:none!important;background:transparent!important;position:static!important;max-height:none!important;overflow:visible!important;display:block!important}
+    #canvasWrap{padding:0!important;margin:0!important;width:100%!important;display:block!important}
+    #sheet{width:100%!important;height:auto!important;border-radius:0!important;max-width:100%!important;display:block!important}
   }
 </style>
 </head>
