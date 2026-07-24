@@ -1176,7 +1176,30 @@ function toggleFull(){
   else alert('Trình duyệt không hỗ trợ toàn màn hình.');
 }
 // In bản vẽ: canvas đã đúng tỉ lệ A4 dọc -> chỉ in mình canvas, vừa khít 1 trang A4.
-function printSheet(){document.body.classList.add('printing');window.print();setTimeout(()=>document.body.classList.remove('printing'),500);}
+function printSheet(){
+  const sheet = document.getElementById('sheet');
+  if(!sheet){ alert('Chưa có bản vẽ để in.'); return; }
+  // Vẽ canvas lên ảnh, mở cửa sổ mới chỉ chứa ảnh đó -> in đúng 1 trang A4 ngang
+  const w = window.open('', '_blank', 'width=1100,height=850');
+  if(!w){ alert('Không mở được cửa sổ in. Vui lòng tắt chặn pop-up và thử lại.'); return; }
+  const img = new Image();
+  img.src = sheet.toDataURL('image/png');
+  img.onload = function(){
+    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>In bản vẽ pallet gỗ</title>'+
+      '<style>@page{size:A4 landscape;margin:4mm}*{margin:0;padding:0}body{display:flex;align-items:center;justify-content:center;height:100vh}'+
+      'img{max-width:100%;max-height:100vh;display:block}</style></head><body><img src="'+img.src+'"></body></html>');
+    w.document.close();
+    w.focus();
+    // Đợi ảnh render xong trong popup rồi in
+    w.addEventListener('load', function(){
+      setTimeout(function(){ w.print(); }, 1200);
+    });
+    // Nếu load đã xảy ra trước khi listener gắn
+    if(w.document.readyState === 'complete'){
+      setTimeout(function(){ w.print(); }, 1200);
+    }
+  };
+}
 // Nhập chiều cao tổng -> tự chia ngược ra CHIỀU CAO CHÂN / NAN LIÊN KẾT (giữ nguyên độ dày các nan), sao cho tổng = H.
 function onHeightInput(){
   const H=parseFloat($('Hdisp').value); if(!H||H<=0){render();return;}
