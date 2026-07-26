@@ -311,8 +311,22 @@
       </div>
     </div>
 
+    <div class="sec"><b>6</b> Giá dự kiến <span style="font-weight:600;text-transform:none;color:var(--muted)">(nội bộ - không hiện trên bản vẽ)</span></div>
+    <div class="grp" data-eng="block stringer collar">
+      <div class="gt">Ước tính giá đầu vào</div>
+      <div class="row">
+        <div><label>Thể tích gỗ (m&sup3;)</label><input id="woodVol" type="text" value="0" readonly style="background:#F4F5F7;color:#6B7680;font-weight:700"></div>
+        <div><label>Đơn giá gỗ (đ/m&sup3;)</label><input id="woodPrice" type="number" value="0" min="0" oninput="updateCostEstimate()"></div>
+      </div>
+      <div class="row">
+        <div><label>Chi phí khác (đ)</label><input id="otherCost" type="number" value="0" min="0" oninput="updateCostEstimate()"></div>
+        <div><label>Giá dự kiến (đ)</label><input id="estPrice" type="text" value="0" readonly style="background:#FFF8F2;color:#E8610A;font-weight:800"></div>
+      </div>
+      <div class="hint">Giá dự kiến = Thể tích gỗ &times; Đơn giá gỗ + Chi phí khác (nhân công, đinh vít, vận chuyển nội bộ...). Thể tích tự tính từ bản vẽ hiện tại (thô, chưa trừ phần khoét chân nếu có). Chỉ để tự ước tính giá đầu vào phục vụ báo giá - không in ra bản vẽ khách xem.</div>
+    </div>
+
     <!-- LƯU MẪU -->
-    <div class="sec"><b>6</b> Lưu &amp; tải mẫu</div>
+    <div class="sec"><b>7</b> Lưu &amp; tải mẫu</div>
     <div class="saved-section">
       <div class="gt">Mẫu đã lưu</div>
       <div class="save-row">
@@ -663,6 +677,25 @@ function buildModel(){
   else if(eng==='collar')m=buildCollar();
   else m=buildBlock();
   return applyCornerCuts(m, num('blkChamfer')||0);
+}
+/* ===== GIÁ DỰ KIẾN (nội bộ - không vẽ lên bản vẽ) =====
+   Thể tích gỗ = tổng dx*dy*dz mọi box trong model (thô, chưa trừ phần khoét chân notch).
+   Giá dự kiến = thể tích(m3) * đơn giá/m3 + chi phí khác. */
+let LAST_MODEL=null;
+function calcWoodVolumeM3(m){
+  m=m||LAST_MODEL;
+  if(!m)return 0;
+  let mm3=0;
+  (m.boxes||[]).forEach(b=>{mm3+=b.dx*b.dy*b.dz;});
+  return mm3/1e9;
+}
+function updateCostEstimate(){
+  if(!$('woodVol'))return;
+  const vol=calcWoodVolumeM3();
+  const price=num('woodPrice'), other=num('otherCost');
+  const total=vol*price+other;
+  $('woodVol').value=vol.toFixed(4);
+  $('estPrice').value=Math.round(total).toLocaleString('vi-VN')+' đ';
 }
 // VÁT CẠNH GÓC: cắt 45° cạnh đứng tại 4 góc pallet (0/L × 0/W), áp cho MỌI box chạm góc
 // (nan trên, nan liên kết, cục đố, nan dưới). Box nào có góc trùng góc pallet -> đánh dấu cut góc đó.
@@ -1120,6 +1153,8 @@ let RENDER_DPR=2;   // 2x cho màn hình; tải ảnh tạm nâng lên 4x cho n�
 function render(){
   updateGapUI();
   const m=buildModel(),cv=$('sheet'),DPR=RENDER_DPR;
+  LAST_MODEL=m;
+  updateCostEstimate();
   if($('Hdisp')&&document.activeElement!==$('Hdisp'))$('Hdisp').value=Math.round(m.Htot);   // đồng bộ H (không ghi đè khi đang gõ)
   const Wd=1500,Hd=1061;   // tỉ lệ A4 NGANG (297:210 = 1.414:1) -> in/xuất PNG vừa khít 1 trang A4 ngang
   cv.width=Wd*DPR;cv.height=Hd*DPR;cv.style.aspectRatio=Wd+'/'+Hd;
@@ -1262,7 +1297,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
 const LS_KEY='icd_pallet_designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap','topGapOut','topGapAuto','topWideIdx','topWideW',
   'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
-  'botN','botW','botT','botRot','strN','strW','strH','notch','notchShape','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat'];
+  'botN','botW','botT','botRot','strN','strW','strH','notch','notchShape','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat','woodPrice','otherCost'];
 function getFormState(){
   const s={};
   FORM_IDS.forEach(id=>{const el=$(id);if(!el)return;s[id]=el.type==='checkbox'?el.checked:el.value;});
