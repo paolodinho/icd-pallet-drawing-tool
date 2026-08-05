@@ -234,11 +234,22 @@
       <div class="chk"><input type="checkbox" id="notch" onchange="onNotchChange()"><label style="margin:0">Khoét chân (2 hốc/chân → 4 chiều nâng)</label></div>
       <div id="notch-shape-row" style="display:none;margin-top:6px">
         <label>Hình dạng hốc khoét</label>
-        <select id="notchShape" onchange="render()">
+        <select id="notchShape" onchange="onNotchShapeChange()">
           <option value="arc">Bán nguyệt (cong)</option>
           <option value="rect">Chữ nhật (vuông cạnh)</option>
+          <option value="round">Chữ nhật bo góc (R tùy chỉnh)</option>
           <option value="vat">Vát góc (bậc thang)</option>
         </select>
+      </div>
+      <div id="notch-dims-row" style="display:none;margin-top:6px">
+        <div class="row">
+          <div><label>Rộng hốc khoét (mm)</label><input id="notchW" type="number" value="250" min="10" oninput="render()"></div>
+          <div><label>Cao hốc khoét (mm)</label><input id="notchH" type="number" value="50" min="5" oninput="render()"></div>
+        </div>
+      </div>
+      <div id="notch-radius-row" style="display:none;margin-top:6px">
+        <label>Bán kính bo góc R (mm)</label>
+        <input id="notchR" type="number" value="15" min="1" oninput="render()">
       </div>
     </div>
 
@@ -551,7 +562,19 @@ function onNotchChange(){
   const checked=$('notch')&&$('notch').checked;
   const row=$('notch-shape-row');
   if(row)row.style.display=checked?'':'none';
+  syncNotchRadiusRow();
   render();
+}
+function onNotchShapeChange(){
+  syncNotchRadiusRow();
+  render();
+}
+function syncNotchRadiusRow(){
+  const dimsRow=$('notch-dims-row'), rRow=$('notch-radius-row');
+  const checked=$('notch')&&$('notch').checked&&!$('notch').disabled;
+  const isRound=$('notchShape')&&$('notchShape').value==='round';
+  if(dimsRow)dimsRow.style.display=checked?'':'none';
+  if(rRow)rRow.style.display=(checked&&isRound)?'':'none';
 }
 function buildPresetMenu(){
   const ss=$('style'); STYLES.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.label;ss.appendChild(o);});
@@ -604,6 +627,7 @@ function applyStyle(){
     const chk=$('notch').closest('.chk'); if(chk){chk.style.opacity=lockNotch?'0.4':'1';chk.title=lockNotch?'Loại 2 mặt 2 chiều dùng chân suốt kín, không khoét chân':'';}
     // Sync notch shape row visibility
     const row=$('notch-shape-row'); if(row)row.style.display=($('notch').checked&&!lockNotch)?'':'none';
+    syncNotchRadiusRow();
   }
   if($('topRot'))$('topRot').checked=!!p.topRot;
   if($('botRot'))$('botRot').checked=!!p.botRot;
@@ -781,10 +805,13 @@ function buildStringer(){
     if(!notch){ boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'block'}); }
     else{
       // CHÂN SUỐT KHOÉT: 1 chân liền chạy suốt, KHOÉT 2 HỐC ở ĐÁY cho càng xe nâng luồn qua (4 chiều).
-      const nh=Math.min(strH*0.62, strH-16);   // chiều sâu hốc
+      // Rộng/Cao hốc lấy từ input (mỗi trường hợp thực tế mỗi khác), có chặn để không tràn ra ngoài chân/L.
+      const nhIn=num('notchH')||50, nh=Math.min(nhIn, strH-16);         // chiều sâu hốc (Cao khoét)
+      const nwIn=num('notchW')||250, hw=Math.min(nwIn/2, L*0.24);       // nửa rộng hốc (Rộng khoét), chặn tránh 2 hốc chồng nhau
       const nshape=($('notchShape')&&$('notchShape').value)||'arc';
+      const nr=(nshape==='round')?(num('notchR')||15):0;   // bán kính bo góc (chỉ dùng khi shape=round)
       boxes.push({x:0,y,z:zStr,dx:L,dy:strW,dz:strH,kind:'notch',
-        notches:[{cx:L*0.285,hw:L*0.105,nh,shape:nshape},{cx:L*0.715,hw:L*0.105,nh,shape:nshape}]});
+        notches:[{cx:L*0.285,hw,nh,shape:nshape,r:nr},{cx:L*0.715,hw,nh,shape:nshape,r:nr}]});
     }
   });
   // GIẰNG NGANG (NAN LIÊN KẾT) trên đầu chân (đỡ nan trên khi nan chạy dọc)
@@ -881,6 +908,19 @@ function drawCornerCutBox(ctx,b,s,ox,oy){
 }
 /* CHÂN SUỐT KHOÉT HỐC VÒM - vẽ profile (x-z) đùn theo bề rộng strW */
 function archProf(t){return Math.min(1,Math.sin(Math.PI*t)*1.55);} // bump cạnh dốc, đỉnh phẳng
+// Hốc chữ nhật BO GÓC (fillet R tùy chỉnh) - trả về mảng điểm profile đầy đủ từ (nl,z0) đến (nr,z0)
+function roundNotchProfile(nl,nr,z0,nh,rIn){
+  const r=Math.max(0,Math.min(rIn!=null?rIn:15,(nr-nl)*0.45,nh*0.9));
+  if(r<0.5)return [[nl,z0],[nl,z0+nh],[nr,z0+nh],[nr,z0]];
+  const N=8,pl=[[nl,z0]];
+  for(let i=1;i<=N;i++){const th=-Math.PI/2+(i/N)*(Math.PI/2);pl.push([nl+r*Math.cos(th),z0+r+r*Math.sin(th)]);}
+  pl.push([nl+r,z0+nh]);
+  pl.push([nr-r,z0+nh]);
+  pl.push([nr-r,z0+r]);
+  for(let i=1;i<=N;i++){const th=0-(i/N)*(Math.PI/2);pl.push([nr-r*Math.cos(th),z0+r+r*Math.sin(th)]);}
+  pl.push([nr,z0]);
+  return pl;
+}
 function notchBottomPts(x0,x1,z0,notches){
   const pts=[[x0,z0]];
   notches.forEach(n=>{
@@ -890,6 +930,10 @@ function notchBottomPts(x0,x1,z0,notches){
       // hốc chữ nhật: xuống thẳng, đáy phẳng, lên thẳng
       pts.push([nl,z0+n.nh]);
       pts.push([nr,z0+n.nh]);
+    } else if(n.shape==='round'){
+      // hốc chữ nhật BO GÓC: như rect nhưng 2 góc trên bo tròn bán kính n.r (nhập tay)
+      const pl=roundNotchProfile(nl,nr,z0,n.nh,n.r);
+      pl.slice(1,-1).forEach(p=>pts.push(p));   // bỏ 2 đầu (nl,z0) và (nr,z0) - ngoài đã tự thêm
     } else if(n.shape==='vat'){
       // hốc vát góc (bậc thang): vát 45° ở 2 mép mở, phần giữa thẳng đứng, đáy phẳng
       const ch=Math.min(n.hw*0.4,n.nh*0.8);
@@ -918,6 +962,11 @@ function drawNotchStr(ctx,b,s,ox,oy){
     if(n.shape==='rect'){
       // trần phẳng hốc chữ nhật
       poly([P(nl,yF,z0+n.nh),P(nr,yF,z0+n.nh),P(nr,yB,z0+n.nh),P(nl,yB,z0+n.nh)],'#D8DBDE');
+    } else if(n.shape==='round'){
+      // trần + vách bo góc R: nhiều mặt nhỏ nối theo cung tròn (giống vat nhưng cong thay vì vát thẳng)
+      const pl=roundNotchProfile(nl,nr,z0,n.nh,n.r);
+      for(let i=0;i<pl.length-1;i++){const a=pl[i],c=pl[i+1];
+        poly([P(a[0],yF,a[1]),P(c[0],yF,c[1]),P(c[0],yB,c[1]),P(a[0],yB,a[1])],'#E7E9EB');}
     } else if(n.shape==='vat'){
       // trần + vách vát góc (bậc thang): 2 mặt vát chéo + 1 mặt trần phẳng ở giữa
       const ch=Math.min(n.hw*0.4,n.nh*0.8);
@@ -1297,7 +1346,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
 const LS_KEY='icd_pallet_designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap','topGapOut','topGapAuto','topWideIdx','topWideW',
   'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom',
-  'botN','botW','botT','botRot','strN','strW','strH','notch','notchShape','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat','woodPrice','otherCost'];
+  'botN','botW','botT','botRot','strN','strW','strH','notch','notchShape','notchW','notchH','notchR','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat','woodPrice','otherCost'];
 function getFormState(){
   const s={};
   FORM_IDS.forEach(id=>{const el=$(id);if(!el)return;s[id]=el.type==='checkbox'?el.checked:el.value;});
