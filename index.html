@@ -912,12 +912,11 @@ function archProf(t){return Math.min(1,Math.sin(Math.PI*t)*1.55);} // bump cạn
 function roundNotchProfile(nl,nr,z0,nh,rIn){
   const r=Math.max(0,Math.min(rIn!=null?rIn:15,(nr-nl)*0.45,nh*0.9));
   if(r<0.5)return [[nl,z0],[nl,z0+nh],[nr,z0+nh],[nr,z0]];
-  const N=8,pl=[[nl,z0]];
-  for(let i=1;i<=N;i++){const th=-Math.PI/2+(i/N)*(Math.PI/2);pl.push([nl+r*Math.cos(th),z0+r+r*Math.sin(th)]);}
-  pl.push([nl+r,z0+nh]);
+  // Bo góc ở TRẦN hốc (z0+nh, chỗ vách hốc chuyển sang mặt trần) - KHÔNG bo ở miệng hốc (z0).
+  const N=8,pl=[[nl,z0],[nl,z0+nh-r]];
+  for(let i=1;i<=N;i++){const th=Math.PI-(i/N)*(Math.PI/2);pl.push([nl+r+r*Math.cos(th),z0+nh-r+r*Math.sin(th)]);}
   pl.push([nr-r,z0+nh]);
-  pl.push([nr-r,z0+r]);
-  for(let i=1;i<=N;i++){const th=0-(i/N)*(Math.PI/2);pl.push([nr-r*Math.cos(th),z0+r+r*Math.sin(th)]);}
+  for(let i=1;i<=N;i++){const th=Math.PI/2-(i/N)*(Math.PI/2);pl.push([nr-r+r*Math.cos(th),z0+nh-r+r*Math.sin(th)]);}
   pl.push([nr,z0]);
   return pl;
 }
