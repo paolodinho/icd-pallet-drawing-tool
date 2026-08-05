@@ -1188,6 +1188,24 @@ function draw2DSide(ctx,area,m){
       prev=r; });
     if(L-prev>2)hDim(ctx,X(prev),X(L),yb,Math.round(L-prev)+'');      // hốc cuối tới mép
     vDim(ctx,Y(z0),Y(z0+ns[0].nh),X(ns[0].cx),Math.round(ns[0].nh)+'');  // CAO hốc (chiều sâu), đặt trong lòng hốc
+    // Bán kính bo góc R (chỉ shape=round): callout mũi tên trỏ vào điểm giữa cung bo, đặt ở góc trên bên trái hốc đầu tiên
+    const n0=ns[0];
+    if(n0.shape==='round' && n0.r>0.5){
+      const r=n0.r, cxr=n0.cx-n0.hw+r, cyr=z0+n0.nh-r, ang=Math.PI*0.75;
+      const px=X(cxr+r*Math.cos(ang)), py=Y(cyr+r*Math.sin(ang));
+      const tx=px-30, ty=py-22;
+      ctx.strokeStyle='#27343A';ctx.fillStyle='#27343A';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(px,py);ctx.stroke();
+      const aAng=Math.atan2(py-ty,px-tx),ah=5;
+      ctx.beginPath();ctx.moveTo(px,py);
+      ctx.lineTo(px-ah*Math.cos(aAng-0.4),py-ah*Math.sin(aAng-0.4));
+      ctx.lineTo(px-ah*Math.cos(aAng+0.4),py-ah*Math.sin(aAng+0.4));
+      ctx.closePath();ctx.fill();
+      const rLbl='R'+(Number.isInteger(r)?r:r.toFixed(1));
+      ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='bottom';
+      ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.strokeText(rLbl,tx,ty-3);
+      ctx.fillStyle='#27343A';ctx.fillText(rLbl,tx,ty-3);
+    }
   }
   // độ dày từng lớp bên phải (theo các mức z duy nhất)
   const zset=[...new Set(m.boxes.flatMap(b=>[Math.round(b.z),Math.round(b.z+b.dz)]))].sort((a,b)=>a-b);
