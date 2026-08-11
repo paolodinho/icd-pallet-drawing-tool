@@ -387,6 +387,7 @@
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(3)">Nhìn cao</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(4)">Gần ngang</button>
         <button type="button" class="btn-ghost vbtn" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="setView(7)">Mặt sau</button>
+        <button type="button" class="btn-ghost" id="btnBottom3D" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="toggleBottom3D()">Xem đáy (lật)</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="toggleFull()">Toàn màn hình</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px" onclick="printSheet()">In bản vẽ (A4)</button>
         <button type="button" class="btn-ghost" style="width:auto;margin:0;padding:7px 12px;font-size:13px;color:#c0392b;border-color:#c0392b" onclick="doLogout()">Thoát</button>
@@ -422,6 +423,13 @@ const A=Math.PI/6,COS=Math.cos(A),SIN=0.40; // SIN thấp hơn 0.5 = camera th�
 const ELEV_MIN=0.14, ELEV_MAX=1.45;   // ~8° (gần ngang) .. ~83° (gần nhìn từ trên)
 const VIEW_DEFAULT={yaw:Math.PI/4,elev:0.82};
 let VIEW={yaw:Math.PI/4,elev:0.82};
+let BOTTOM3D=false;   // true = phối cảnh 3D đang "lật đáy lên" (xem mặt dưới pallet)
+function toggleBottom3D(){
+  BOTTOM3D=!BOTTOM3D;
+  const b=$('btnBottom3D');
+  if(b){b.style.borderColor=BOTTOM3D?'#FB7703':'';b.style.color=BOTTOM3D?'#FB7703':'';b.textContent=BOTTOM3D?'Đang xem đáy ✓':'Xem đáy (lật)';}
+  render();
+}
 const LOGO=new Image();let LOGO_OK=false;LOGO.onload=()=>{LOGO_OK=true;render();};LOGO.src=window.LOGO_DATA;
 function $(id){return document.getElementById(id);}
 function num(id){return parseFloat($(id).value)||0;}
@@ -1084,8 +1092,12 @@ function drawPalletInto(ctx,area,m){
   // bóng nền rất nhạt (xám) cho có chiều sâu, không màu nâu
   const sh=[[0,0,0],[L,0,0],[L,W,0],[0,W,0]].map(c=>proj(c[0],c[1],0,s,ox,oy));
   ctx.save();ctx.fillStyle='rgba(39,52,58,.06)';ctx.beginPath();sh.forEach((q,i)=>i?ctx.lineTo(q.X+12,q.Y+16):ctx.moveTo(q.X+12,q.Y+16));ctx.closePath();ctx.fill();ctx.restore();
+  // XEM ĐÁY (lật): mirror Z quanh giữa chiều cao (Htot - z - dz) - giữ nguyên toàn bộ logic
+  // shading/z-sort/cote hiện có (chỉ đổi thứ tự lớp), cho hiệu quả "lật pallet lên xem đáy"
+  // giống cách vẽ kỹ thuật vẫn làm (bottom view = mirror của top view), không cần camera dưới thật.
+  const boxesToDraw = BOTTOM3D ? m.boxes.map(b=>Object.assign({},b,{z:H-(b.z+b.dz)})) : m.boxes;
   // Vẽ theo LỚP từ dưới lên (z trước), trong cùng lớp thì xa -> gần (x+y) -> xếp chồng đúng, không có thanh "bay".
-  [...m.boxes].sort((a,b)=>(a.z-b.z)||(boxDepth(a)-boxDepth(b))).forEach(b=>{
+  [...boxesToDraw].sort((a,b)=>(a.z-b.z)||(boxDepth(a)-boxDepth(b))).forEach(b=>{
     if(b.kind==='notch') drawNotchStr(ctx,b,s,ox,oy);
     else if(b.ch>0 && b.cut) drawCornerCutBox(ctx,b,s,ox,oy);
     else drawBox(ctx,b,s,ox,oy);
@@ -1232,6 +1244,30 @@ function draw2DTop(ctx,area,m){
   // Cote chi tiết (rộng nan/khe, khoảng cách chân) đã chuyển LÊN HÌNH 3D (đỡ chật) -
   // hình chiếu bằng chỉ giữ cote tổng L/W + lưới vị trí chân (nét đứt cam) cho thợ.
 }
+/* HÌNH CHIẾU BẰNG - ĐÁY (lật lên): vẽ các box nằm SÁT ĐÁY (z≈0 - nan đáy/giằng đáy/chân suốt,
+   tuỳ kiểu dáng) - mirror trục W (Y) để mô phỏng đúng thao tác lật pallet lên xem đáy (bottom
+   view = ảnh gương của top view, đúng chuẩn bản vẽ kỹ thuật, không cần dựng camera nhìn từ dưới). */
+function draw2DBottom(ctx,area,m){
+  const {x:ax,y:ay,w:aw,h:ah}=area,L=m.L,W=m.W,pad=40;
+  const s=Math.min((aw-pad*2)/L,(ah-pad*2)/W);
+  const dw=L*s,dh=W*s,px=ax+(aw-dw)/2,py=ay+(ah-dh)/2;
+  const X=x=>px+x*s, Y=y=>py+(W-y)*s;   // Y mirror: lật theo trục W
+  ctx.fillStyle='#FAFBFC';ctx.fillRect(X(0),Y(W),dw,dh);
+  const bot=m.boxes.filter(b=>Math.abs(b.z-0)<0.6).sort((a,b)=>a.x-b.x);
+  ctx.lineWidth=1;
+  bot.forEach(b=>{ctx.fillStyle='#E4E7E9';ctx.strokeStyle='#2A2F33';
+    ctx.fillRect(X(b.x),Y(b.y+b.dy),b.dx*s,b.dy*s);ctx.strokeRect(X(b.x),Y(b.y+b.dy),b.dx*s,b.dy*s);
+  });
+  // lưới chân cục (nét đứt cam) - đối chiếu vị trí chân so với nan đáy khi lật
+  const blocks=m.boxes.filter(b=>b.kind==='block');
+  if($('engine').value==='block' && blocks.length){
+    ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#FB7703';ctx.lineWidth=1;
+    blocks.forEach(b=>ctx.strokeRect(X(b.x),Y(b.y+b.dy),b.dx*s,b.dy*s));
+    ctx.restore();
+  }
+  ctx.strokeStyle='#9aa0a5';ctx.strokeRect(X(0),Y(W),dw,dh);
+  hDim(ctx,X(0),X(L),Y(0)+22,L+' mm');
+}
 /* HÌNH CHIẾU CẠNH - cắt lớp (nhìn từ mặt trước, theo chiều dài) */
 function draw2DSide(ctx,area,m){
   const {x:ax,y:ay,w:aw,h:ah}=area,L=m.L,H=m.Htot,pad=56;
@@ -1325,15 +1361,21 @@ function render(){
   ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle='#27343A';ctx.font='700 18px Arial';ctx.fillText('BẢN VẼ KỸ THUẬT - PHỐI CẢNH 3D',40,124);
   ctx.fillStyle='#FB7703';ctx.fillRect(40,134,300,3);
   ctx.fillStyle='#FAFBFC';roundRect(ctx,32,144,1436,558,12);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  viewLabel(ctx,44,166,'Phối cảnh 3D');
+  viewLabel(ctx,44,166,BOTTOM3D?'Phối cảnh 3D - ĐANG XEM ĐÁY (lật lên)':'Phối cảnh 3D');
+  if(BOTTOM3D){ctx.save();ctx.fillStyle='#FB7703';ctx.font='700 12px Arial';ctx.textAlign='right';ctx.fillText('⤴ Đã lật pallet - đang xem mặt ĐÁY',1444,166);ctx.restore();}
   drawPalletInto(ctx,{x:40,y:156,w:1420,h:540},m);
   // ====== HÀNG DƯỚI: HÌNH CHIẾU BẰNG | CẠNH | THÔNG SỐ | CẤU TẠO (4 cột) ======
   const by=720, bb=738, bh=258;
-  // Cột 1 - Hình chiếu bằng
+  // Cột 1 - Hình chiếu bằng: chia đôi TRÊN | ĐÁY (lật lên) để thấy được nan đáy/giằng đáy
   ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.textAlign='left';ctx.fillText('HÌNH CHIẾU BẰNG',40,by);
   ctx.fillStyle='#FB7703';ctx.fillRect(40,by+8,120,3);
   ctx.fillStyle='#FAFBFC';roundRect(ctx,32,bb,372,bh,10);ctx.fill();ctx.strokeStyle='#E2E5E8';ctx.stroke();
-  draw2DTop(ctx,{x:40,y:bb+12,w:356,h:bh-24},m);
+  const halfGap=8, halfW=(356-halfGap)/2;
+  ctx.font='600 10px Arial';ctx.fillStyle='#6B7680';ctx.textAlign='left';
+  ctx.fillText('MẶT TRÊN',44,bb+22); ctx.fillText('MẶT ĐÁY (lật lên)',44+halfW+halfGap,bb+22);
+  ctx.strokeStyle='#E2E5E8';ctx.beginPath();ctx.moveTo(40+halfW+halfGap/2,bb+12);ctx.lineTo(40+halfW+halfGap/2,bb+bh-14);ctx.stroke();
+  draw2DTop(ctx,{x:40,y:bb+28,w:halfW,h:bh-40},m);
+  draw2DBottom(ctx,{x:40+halfW+halfGap,y:bb+28,w:halfW,h:bh-40},m);
   // Cột 2 - Hình chiếu cạnh
   ctx.fillStyle='#27343A';ctx.font='700 15px Arial';ctx.textAlign='left';ctx.fillText('HÌNH CHIẾU CẠNH - CẮT LỚP',416,by);
   ctx.fillStyle='#FB7703';ctx.fillRect(416,by+8,200,3);
