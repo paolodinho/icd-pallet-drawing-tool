@@ -276,6 +276,7 @@
         <div><label>Dày</label><input id="botT" type="number" value="15"></div>
       </div>
       <div class="chk"><input type="checkbox" id="botRot" onchange="render()"><label style="margin:0">Đổi chiều nan đáy (xoay 90&deg; - chạy theo chiều dài L)</label></div>
+      <div class="chk" style="margin-top:8px"><input type="checkbox" id="botFrame" onchange="render()"><label style="margin:0">Đế viền chu vi (chỉ 2 giằng dọc biên ngoài, bỏ giằng dọc hàng giữa) - chỉ áp dụng Pallet 1 mặt chân cục</label></div>
       <div class="chk" style="margin-top:8px"><input type="checkbox" id="botVar" onchange="onBotVarChange()"><label style="margin:0">Nan đáy kích thước khác nhau (nhập danh sách)</label></div>
       <div id="bot-var-row" style="display:none;margin-top:6px">
         <label>Rộng từng nan (mm), theo đúng Số lượng, cách nhau dấu phẩy (để trống/0 = dùng Rộng chung)</label>
@@ -691,7 +692,7 @@ function applyStyle(){
   // Khi đổi kiểu dáng: reset về auto-sync (bỏ tick custom)
   if($('blkCustom')){ $('blkCustom').checked=false; onBlkCustom(); }
   // Reset các tuỳ chỉnh "khác kích thước theo vị trí" (flexible) khi đổi kiểu dáng - tránh dữ liệu cũ áp nhầm kiểu mới.
-  ['blkVar','topVar','botVar'].forEach(id=>{ if($(id))$(id).checked=false; });
+  ['blkVar','topVar','botVar','botFrame'].forEach(id=>{ if($(id))$(id).checked=false; });
   onBlkVarChange(); onTopVarChange(); onBotVarChange();
   // Chân cục KHỚP bề rộng nan (dài a = rộng nan đáy, rộng b = rộng nan liên kết)
   // Trừ kiểu EPAL chân cục (blkFixed): giữ nguyên kích thước cục chuẩn 145, không thu theo nan.
@@ -842,7 +843,9 @@ function buildBlock(){
   let botBoxes=[];
   if(faces===2){ botBoxes=deck(botRot,botN,botW,botT,0,L,W,1,0,0,'in',0,0,botCW,botCL); boxes.push(...botBoxes); }
   else {
-    colY.forEach((cy,j)=>boxes.push({x:0,y:cy+rowWidths[j]/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'}));
+    const botFrame=$('botFrame')&&$('botFrame').checked;   // viền chu vi: chỉ 2 giằng dọc ở 2 hàng biên ngoài
+    const docRows=botFrame&&colY.length>2?[0,colY.length-1]:colY.map((_,j)=>j);
+    docRows.forEach(j=>{const cy=colY[j];boxes.push({x:0,y:cy+rowWidths[j]/2-botW/2,z:0,dx:L,dy:botW,dz:botT,kind:'board'});});
     xs.forEach((bx,i)=>boxes.push({x:bx+colLens[i]/2-botW/2,y:0,z:0,dx:botW,dy:W,dz:botT,kind:'board'}));
   }
   // CHÂN CỤC (số lượng = blkNL x blkNW; dài/rộng lấy theo colLens/rowWidths - đều nhau hoặc khác nhau theo vị trí)
@@ -852,7 +855,8 @@ function buildBlock(){
   // NAN MẶT TRÊN: hướng theo topRot
   const topBoxes=deck(topRot,topN,topW,topT,zTop,L,W,num('topGroup'),num('topGap'),num('topGapOut'),topGapMode(),num('topWideIdx'),num('topWideW'),topCW);
   boxes.push(...topBoxes);
-  const nCol=blkNW;
+  const botFrame=$('botFrame')&&$('botFrame').checked;
+  const nCol=(faces!==2&&botFrame&&blkNW>2)?2:blkNW;
   const cau=[];
   if(topCW) cau.push(...groupBoardsCau(topBoxes,'Nan mặt trên')); else cau.push([topN+' Nan mặt trên',(topRot?L:W)+'x'+topW+'x'+topT+'mm']);
   cau.push([linkN+' Nan liên kết (nan gánh)',(linkRot?L:W)+'x'+linkW+'x'+linkT+'mm']);
@@ -1491,7 +1495,7 @@ function setView(i){curView=(VIEWS[i]?i:0);const v=VIEWS[curView];VIEW={yaw:v.ya
 const LS_KEY='icd_pallet_designs';
 const FORM_IDS=['style','engine','faces','title','material','L','W','topN','topW','topT','topRot','topGroup','topGap','topGapOut','topGapAuto','topWideIdx','topWideW','topVar','topVarList',
   'linkN','linkW','linkT','linkRot','linkPos','blkNL','blkNW','blkA','blkB','blkH','blkChamfer','blkCustom','blkVar','blkVarA','blkVarB',
-  'botN','botW','botT','botRot','botVar','botVarW','botVarLen','strN','strW','strH','notch','notchShape','notchW','notchH','notchR','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat','woodPrice','otherCost'];
+  'botN','botW','botT','botRot','botFrame','botVar','botVarW','botVarLen','strN','strW','strH','notch','notchShape','notchW','notchH','notchR','colT','colH','dynLoad','staLoad','moist','treat','color','market','ispmTreat','woodPrice','otherCost'];
 function getFormState(){
   const s={};
   FORM_IDS.forEach(id=>{const el=$(id);if(!el)return;s[id]=el.type==='checkbox'?el.checked:el.value;});
